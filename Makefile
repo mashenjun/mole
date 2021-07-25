@@ -6,8 +6,8 @@ GOPATH ?= $(shell go env GOPATH)
 ifeq "$(GOPATH)" ""
   $(error Please set the environment variable GOPATH before running `make`)
 endif
-
-GOENV   	    			:= GO111MODULE=on CGO_ENABLED=0
+BUILD_FLAG			:= -trimpath
+GOENV   	    	:= GO111MODULE=on CGO_ENABLED=0
 GO                  := $(GOENV) go
 GOBUILD             := $(GO) build $(BUILD_FLAG)
 GOTEST              := $(GO) test -v --count=1 --parallel=1 -p=1
@@ -18,7 +18,7 @@ PACKAGE_LIST        := go list ./...| grep -vE "cmd"
 PACKAGES            := $$($(PACKAGE_LIST))
 
 # Targets
-.PHONY: cli test
+.PHONY: cli cli_linux test
 
 CURDIR := $(shell pwd)
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -28,6 +28,9 @@ export PATH := $(CURDIR)/bin/:$(PATH)
 
 cli: lint
 	$(GOBUILD) -o bin/mole ./cmd
+
+cli_linux: lint
+	GOOS=linux GOARCH=amd64 $(GOBUILD) -o bin/linux/mole ./cmd
 
 test:
 	$(GOTEST) ./...
