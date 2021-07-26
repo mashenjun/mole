@@ -14,13 +14,15 @@ type SchemaCollector struct {
 	db *gorm.DB
 	sink chan *ast.CreateTableStmt
 	parser *parser.Parser
+	database string
 }
 
-func NewSchemaCollector(db *gorm.DB) (*SchemaCollector, error) {
+func NewSchemaCollector(db *gorm.DB, database string) (*SchemaCollector, error) {
 	collector := &SchemaCollector{
 		db: db,
-		sink: make(chan *ast.CreateTableStmt),
+		sink: make(chan *ast.CreateTableStmt, 10),
 		parser: parser.New(),
+		database: database,
 	}
 	return collector, nil
 }
@@ -33,6 +35,9 @@ func (sc *SchemaCollector) Collect() error {
 	defer close(sc.sink)
 	// get all table in the given db
 	tbls := make([]string, 0)
+	if err := sc.db.Exec(fmt.Sprintf( "USE %s", sc.database)).Error; err != nil {
+		return err
+	}
 	if err:= sc.db.Raw("SHOW TABLES").Scan(&tbls).Error; err != nil {
 		return err
 	}
