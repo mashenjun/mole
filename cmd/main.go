@@ -28,6 +28,7 @@ func command() *cobra.Command {
 	cmd.CompletionOptions.DisableDefaultCmd = true
 	cmd.AddCommand(
 		schemaCmd(),
+		metricsCmd(),
 	)
 	return cmd
 }

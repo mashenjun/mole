@@ -19,12 +19,11 @@ func TestSchemaCollector_Collect(t *testing.T) {
 	}
 	sink := c.GetSink()
 	go func() {
-		for n := range sink {
-			t.Log(n.Text())
+		if err := c.Collect(); err != nil {
+			panic(err)
 		}
 	}()
-	if err := c.Collect(); err != nil {
-		t.Fatal(err)
+	for n := range sink {
+		t.Log(n.Text())
 	}
-
 }
