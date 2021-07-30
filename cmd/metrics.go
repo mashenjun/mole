@@ -103,48 +103,6 @@ func metricsCmd() *cobra.Command {
 				fmt.Printf("collect metrics error: %+v\n", err)
 				return err
 			}
-			// use Drain method
-			//errG, ctx := errgroup.WithContext(context.Background())
-			//errG.Go(func() error {
-			//	if _, err := mc.Prepare(topo); err != nil {
-			//		return err
-			//	}
-			//	return nil
-			//})
-			//errG.Go(func() error {
-			//	return mc.Drain(ctx)
-			//})
-			//if err := errG.Wait(); err != nil {
-			//	fmt.Printf("collect metrics error: %+v\n", err)
-			//	return err
-			//}
-
-			// use Dispatch method
-
-			//d, err := dispatch.NewMetricDispatcher(output, mc.GetSink(), merge)
-			//if err != nil {
-			//	fmt.Printf("new metrics dispatcher error: %+v\n",err)
-			//	return err
-			//}
-			//
-			//if _, err := mc.Prepare(topo); err != nil {
-			//	fmt.Printf("prepare metrics error: %+v\n",err)
-			//	return err
-			//}
-			//errG, ctx := errgroup.WithContext(context.Background())
-			//errG.Go(func() error {
-			//	if err := mc.Sink(topo); err != nil {
-			//		return err
-			//	}
-			//	return nil
-			//})
-			//errG.Go(func() error {
-			//	return d.Start(ctx)
-			//})
-			//if err := errG.Wait(); err != nil {
-			//	fmt.Printf("collect metrics error: %+v\n", err)
-			//	return err
-			//}
 			return nil
 		},
 	}

@@ -133,11 +133,6 @@ type Endpoint struct {
 	Port string
 }
 
-//type TargetMetrics struct {
-//	ep  Endpoint
-//	mtc string
-//}
-
 // Prepare implements the Collector interface
 func (c *MetricsCollect) Prepare(topo []Endpoint) (map[string][]CollectStat, error) {
 	if len(topo) < 1 {
@@ -173,11 +168,6 @@ func (c *MetricsCollect) Prepare(topo []Endpoint) (map[string][]CollectStat, err
 		})
 	}
 	c.targetRecord = append(c.targetRecord, c.cookedRecord...)
-	// send the metrics to the pipe
-	//for _, m := range targets {
-	//	c.pipe <- m
-	//}
-	//close(c.pipe)
 	return nil, nil
 }
 
@@ -206,7 +196,7 @@ func (c *MetricsCollect) Collect(topo []Endpoint) error {
 		key := fmt.Sprintf("%s:%v", prom.Host, prom.Port)
 		done := 1
 		// ensure the file path for output is ready
-		if err := utils.EnsureMonitorDir(c.outputDir, c.genTopoDirName(prom)); err != nil {
+		if err := utils.EnsureMonitorDir(c.outputDir, c.genDirName(prom)); err != nil {
 			bars[key].UpdateDisplay(&progress.DisplayProps{
 				Prefix: fmt.Sprintf("  - Query server %s: %s", key, err),
 				Mode:   progress.ModeError,
@@ -264,49 +254,6 @@ func (c *MetricsCollect) Collect(topo []Endpoint) error {
 	return nil
 }
 
-// Drain consume the pipe
-//func (c *MetricsCollect) Drain(ctx context.Context) error {
-//	mb := progress.NewMultiBar("+ Dumping metrics")
-//	bars := make(map[string]*progress.MultiBarItem)
-//	mu := sync.Mutex{}
-//
-//	bars["default"] = mb.AddBar(fmt.Sprintf("  - Querying server %s", "default"))
-//
-//	mb.StartRenderLoop()
-//	defer mb.StopRenderLoop()
-//
-//	wg := &sync.WaitGroup{}
-//	done := 1
-//	wg.Add(c.concurrency)
-//	for i := 0; i < c.concurrency; i++ {
-//		go func(wg *sync.WaitGroup) {
-//			defer wg.Done()
-//			for target := range c.pipe {
-//				bars["default"].UpdateDisplay(&progress.DisplayProps{
-//					Prefix: fmt.Sprintf("  - Querying server %s", "default"),
-//					Suffix: fmt.Sprintf("%d/%d querying %s ...", done, len(c.metrics), target.mtc),
-//				})
-//
-//				if err := c.collectMetric(target.ep, c.timeSteps, target.mtc); err != nil {
-//					fmt.Println(err)
-//				}
-//				mu.Lock()
-//				done++
-//				if done >= len(c.metrics) {
-//					bars["default"].UpdateDisplay(&progress.DisplayProps{
-//						Prefix: fmt.Sprintf("  - Query server %s", "default"),
-//						Mode:   progress.ModeDone,
-//					})
-//				}
-//				mu.Unlock()
-//			}
-//		}(wg)
-//	}
-//
-//	wg.Wait()
-//	return nil
-//}
-
 func (c *MetricsCollect) getMetricList(prom string) ([]string, error) {
 	if len(c.rawMetrics) > 0 {
 		// use url encode in case we use prom query in metrics list.
@@ -360,7 +307,7 @@ func (c *MetricsCollect) collectMetric(prom Endpoint, ts []string, mtc string, e
 				// the following implement is write the response to file
 				filename := c.genFileName(mtc, i)
 				fmt.Printf("%+v\n", filename)
-				topoDir := c.genTopoDirName(prom)
+				topoDir := c.genDirName(prom)
 				dst, err := os.OpenFile(
 					filepath.Join(
 						c.outputDir, topoDir, filename,
@@ -403,7 +350,7 @@ func (c *MetricsCollect) genFileName(mtc string, idx int) string {
 	return fmt.Sprintf("%s-%v.json", mtc, idx)
 }
 
-func (c *MetricsCollect) genTopoDirName(ep Endpoint) string {
+func (c *MetricsCollect) genDirName(ep Endpoint) string {
 	return fmt.Sprintf("%s-%v", ep.Host, ep.Port)
 }
 
