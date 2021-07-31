@@ -1,4 +1,4 @@
-package collector
+package prom
 
 import (
 	"encoding/json"
@@ -35,7 +35,7 @@ type MetricsRecord struct {
 // MetricsCollect is the options collecting metrics
 type MetricsCollect struct {
 	timeSteps    []string
-	rawMetrics   []string // raw metric list
+	rawMetrics   []string        // raw metric list
 	cookedRecord []MetricsRecord // cooked metric list
 	targetRecord []MetricsRecord
 	concurrency  int
@@ -94,7 +94,7 @@ func WithMerge(merge bool) MetricsCollectOpt {
 
 func WithOutputDir(output string) MetricsCollectOpt {
 	return func(collect *MetricsCollect) error {
-		if err := utils.EnsureMonitorDir(output); err != nil {
+		if err := utils.EnsureDir(output); err != nil {
 			return err
 		}
 		collect.outputDir = output
@@ -196,7 +196,7 @@ func (c *MetricsCollect) Collect(topo []Endpoint) error {
 		key := fmt.Sprintf("%s:%v", prom.Host, prom.Port)
 		done := 1
 		// ensure the file path for output is ready
-		if err := utils.EnsureMonitorDir(c.outputDir, c.genDirName(prom)); err != nil {
+		if err := utils.EnsureDir(c.outputDir, c.genDirName(prom)); err != nil {
 			bars[key].UpdateDisplay(&progress.DisplayProps{
 				Prefix: fmt.Sprintf("  - Query server %s: %s", key, err),
 				Mode:   progress.ModeError,
@@ -306,7 +306,6 @@ func (c *MetricsCollect) collectMetric(prom Endpoint, ts []string, mtc string, e
 				// implement 2
 				// the following implement is write the response to file
 				filename := c.genFileName(mtc, i)
-				fmt.Printf("%+v\n", filename)
 				topoDir := c.genDirName(prom)
 				dst, err := os.OpenFile(
 					filepath.Join(

@@ -42,7 +42,7 @@ func NewMetricDispatcher(dir string, source <-chan *MetricMsg, merge bool) (*Met
 	} else {
 		md.fileFlag = os.O_RDWR | os.O_CREATE | os.O_TRUNC
 	}
-	if err := utils.EnsureMonitorDir(md.outputDir); err != nil {
+	if err := utils.EnsureDir(md.outputDir); err != nil {
 		return nil, err
 	}
 	return md, nil

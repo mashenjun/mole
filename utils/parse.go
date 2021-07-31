@@ -85,7 +85,7 @@ func ParseTime(s string) (time.Time, error) {
 	return time.Time{}, fmt.Errorf("cannot parse %q to a valid timestamp", s)
 }
 
-func EnsureMonitorDir(base string, sub ...string) error {
+func EnsureDir(base string, sub ...string) error {
 	e := []string{base}
 	e = append(e, sub...)
 	dir := path.Join(e...)
