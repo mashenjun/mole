@@ -29,6 +29,7 @@ func command() *cobra.Command {
 	cmd.AddCommand(
 		schemaCmd(),
 		metricsCmd(),
+		keyvizCmd(),
 	)
 	return cmd
 }

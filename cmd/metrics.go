@@ -3,7 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/mashenjun/mole/collector"
+	"github.com/mashenjun/mole/collector/prom"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
@@ -38,14 +38,14 @@ func metricsCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			fmt.Printf("run merge %+v\n", merge)
 			// TODO: init the related component and start the process
-			topo := make([]collector.Endpoint, 0, len(hosts))
+			topo := make([]prom.Endpoint, 0, len(hosts))
 			for _, h := range hosts {
 				s := strings.Split(h, ":")
 				if len(s) != 2 {
 					fmt.Println("hosts invalid")
 					return errors.New("hosts invalid")
 				}
-				topo = append(topo, collector.Endpoint{
+				topo = append(topo, prom.Endpoint{
 					Host: s[0],
 					Port: s[1],
 				})
@@ -67,7 +67,7 @@ func metricsCmd() *cobra.Command {
 				},
 				Timeout: 60 * time.Second,
 			}
-			ml := MetricsList{Raw: make([]string, 0), Cooked: make([]collector.MetricsRecord, 0)}
+			ml := MetricsList{Raw: make([]string, 0), Cooked: make([]prom.MetricsRecord, 0)}
 			if len(target) != 0 {
 				b, err := ioutil.ReadFile(target)
 				if err != nil {
@@ -80,12 +80,12 @@ func metricsCmd() *cobra.Command {
 				}
 			}
 
-			mc, err := collector.NewMetricsCollect(
-				collector.WithHttpCli(cli),
-				collector.WithTimeRange(begin, end),
-				collector.WithConcurrency(int(concurrency)),
-				collector.WithMerge(merge),
-				collector.WithOutputDir(output),
+			mc, err := prom.NewMetricsCollect(
+				prom.WithHttpCli(cli),
+				prom.WithTimeRange(begin, end),
+				prom.WithConcurrency(int(concurrency)),
+				prom.WithMerge(merge),
+				prom.WithOutputDir(output),
 			)
 			if err != nil {
 				fmt.Printf("new metrics collect error: %+v\n", err)
@@ -111,12 +111,12 @@ func metricsCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&end, "to", "t", time.Now().Format(time.RFC3339), "stop time point when collecting timeseries data")
 	cmd.Flags().StringVarP(&output, "output", "o", "", "output directory of collected data")
 	cmd.Flags().BoolVarP(&merge, "merge", "m", true, "merge content of different range for one metrics into one file")
-	cmd.Flags().StringSliceVarP(&hosts, "hosts", "H", nil, "hosts list")
+	cmd.Flags().StringSliceVarP(&hosts, "hosts", "H", nil, "hosts list with ip:port format")
 	cmd.Flags().StringVarP(&target, "target", "T", "", "path to yaml file containing target metrics")
 	return cmd
 }
 
 type MetricsList struct {
-	Raw    []string       `yaml:"raw"`
-	Cooked []collector.MetricsRecord `yaml:"cooked"`
+	Raw    []string             `yaml:"raw"`
+	Cooked []prom.MetricsRecord `yaml:"cooked"`
 }
