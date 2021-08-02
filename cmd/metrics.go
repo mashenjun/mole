@@ -9,8 +9,8 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/url"
 	"runtime"
-	"strings"
 	"time"
 )
 
@@ -40,14 +40,15 @@ func metricsCmd() *cobra.Command {
 			// TODO: init the related component and start the process
 			topo := make([]prom.Endpoint, 0, len(hosts))
 			for _, h := range hosts {
-				s := strings.Split(h, ":")
-				if len(s) != 2 {
-					fmt.Println("hosts invalid")
-					return errors.New("hosts invalid")
+				u, err := url.Parse(h)
+				if err != nil {
+					fmt.Printf("hosts is invalid: %v\n", err)
+					return err
 				}
 				topo = append(topo, prom.Endpoint{
-					Host: s[0],
-					Port: s[1],
+					Schema: u.Scheme,
+					Host: u.Hostname(),
+					Port: u.Port(),
 				})
 			}
 
@@ -111,7 +112,7 @@ func metricsCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&end, "to", "t", time.Now().Format(time.RFC3339), "stop time point when collecting timeseries data")
 	cmd.Flags().StringVarP(&output, "output", "o", "", "output directory of collected data")
 	cmd.Flags().BoolVarP(&merge, "merge", "m", true, "merge content of different range for one metrics into one file")
-	cmd.Flags().StringSliceVarP(&hosts, "hosts", "H", nil, "hosts list with ip:port format")
+	cmd.Flags().StringSliceVarP(&hosts, "hosts", "H", nil, "hosts list with schema://ip:port format")
 	cmd.Flags().StringVarP(&target, "target", "T", "", "path to yaml file containing target metrics")
 	return cmd
 }

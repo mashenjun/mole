@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/url"
 	"runtime"
 	"strings"
 	"time"
@@ -71,15 +72,19 @@ func keyvizCmd() *cobra.Command {
 				kc.SetSessionCode(strings.TrimRight(string(bs), "\n"))
 			}else {
 				kc.SetUserPwd(user, pwd)
-
+			}
+			endpoint, err := url.Parse(host)
+			if err != nil {
+				fmt.Printf("host is invaild: %v\n", err)
+				return err
 			}
 			ctx := context.Background()
-			token, err := kc.Login(ctx, host)
+			token, err := kc.Login(ctx, endpoint)
 			if err != nil {
 				fmt.Printf("login to dashboard api server %v error: %v\n", host, err)
 				return err
 			}
-			if err := kc.Collect(ctx, token, host); err != nil {
+			if err := kc.Collect(ctx, token, endpoint); err != nil {
 				fmt.Printf("collect heamap error: %v\n", err)
 				return err
 			}
@@ -90,7 +95,7 @@ func keyvizCmd() *cobra.Command {
 	// fill the mysql config form the flag
 	cmd.Flags().StringVarP(&user, "user", "u", "", "the dsn used to connect db")
 	cmd.Flags().StringVarP(&pwd, "pwd", "p", "", "the dsn used to connect db")
-	cmd.Flags().StringVarP(&host, "host", "H", "", "host for dashboard api with ip:port format")
+	cmd.Flags().StringVarP(&host, "host", "H", "", "host for dashboard api with schema://ip:port format")
 	cmd.Flags().StringVarP(&output, "output", "o", "", "the output file used to store heatmap data")
 	cmd.Flags().StringVarP(&begin, "from", "f", time.Now().Add(time.Hour*-2).Format(time.RFC3339), "start time point when collecting timeseries data")
 	cmd.Flags().StringVarP(&end, "to", "t", time.Now().Format(time.RFC3339), "stop time point when collecting timeseries data")

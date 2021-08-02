@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"runtime"
 	"testing"
@@ -35,8 +36,12 @@ func TestKeyVizCollect_Login(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	endpoint, err := url.Parse(host)
+	if err != nil {
+		t.Fatal(err)
+	}
 	kc.SetSessionCode(code)
-	token, err := kc.Login(context.Background(), host)
+	token, err := kc.Login(context.Background(), endpoint)
 	if err != nil {
 		t.Fatal(err)
 	}
