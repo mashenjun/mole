@@ -129,6 +129,7 @@ func (c *MetricsCollect) SetCookedRecord(cr []MetricsRecord) {
 }
 
 type Endpoint struct {
+	Schema string
 	Host string
 	Port string
 }
@@ -144,7 +145,7 @@ func (c *MetricsCollect) Prepare(topo []Endpoint) (map[string][]CollectStat, err
 	var promAddr string
 	//var targets []*TargetMetrics
 	for _, prom := range topo {
-		promAddr = fmt.Sprintf("%s:%s", prom.Host, prom.Port)
+		promAddr = fmt.Sprintf("%s://%s:%s", prom.Schema, prom.Host, prom.Port)
 		metrics, err := c.getMetricList(promAddr)
 		if err == nil {
 			queryOK = true
@@ -262,7 +263,7 @@ func (c *MetricsCollect) getMetricList(prom string) ([]string, error) {
 		//}
 		return c.rawMetrics, nil
 	}
-	resp, err := c.cli.Get(fmt.Sprintf("http://%s/api/v1/label/__name__/values", prom))
+	resp, err := c.cli.Get(fmt.Sprintf("%s/api/v1/label/__name__/values", prom))
 	if err != nil {
 		return nil, err
 	}
@@ -281,12 +282,12 @@ func (c *MetricsCollect) getMetricList(prom string) ([]string, error) {
 }
 
 func (c *MetricsCollect) collectMetric(prom Endpoint, ts []string, mtc string, expr string) error {
-	promAddr := fmt.Sprintf("%s:%s", prom.Host, prom.Port)
+	promAddr := fmt.Sprintf("%s://%s:%s", prom.Schema, prom.Host, prom.Port)
 	for i := 0; i < len(ts)-1; i++ {
 		if err := tiuputils.Retry(
 			func() error {
 				resp, err := c.cli.PostForm(
-					fmt.Sprintf("http://%s/api/v1/query_range", promAddr),
+					fmt.Sprintf("%s/api/v1/query_range", promAddr),
 					url.Values{
 						"query": {expr},
 						"start": {ts[i]},

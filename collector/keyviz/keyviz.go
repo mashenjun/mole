@@ -101,7 +101,7 @@ func (c *KeyVizCollect) SetSessionCode(code string) {
 	c.password = code
 }
 
-func (c *KeyVizCollect) Login(ctx context.Context, endpoint string) (string, error) {
+func (c *KeyVizCollect) Login(ctx context.Context, endpoint *url.URL) (string, error) {
 	param := LoginParam{}
 
 	if c.loginMode == "password"{
@@ -116,14 +116,15 @@ func (c *KeyVizCollect) Login(ctx context.Context, endpoint string) (string, err
 	}
 	data := LoginData{}
 	fmt.Printf("param %+v\n",param)
-	u := fmt.Sprintf("http://%s%s",endpoint, loginAPIPath)
+
+	u := fmt.Sprintf("%s%s", endpoint.String(), loginAPIPath)
 	if err := c.cli.CallWithJson(ctx, &data, http.MethodPost, u, param); err != nil {
 		return "", err
 	}
 	return data.Token, nil
 }
 
-func (c *KeyVizCollect) Collect(ctx context.Context, token string, endpoint string) error {
+func (c *KeyVizCollect) Collect(ctx context.Context, token string, endpoint *url.URL) error {
 	// query read bytes
 	if err := c.queryHeapMap(ctx, token, heatMapTypeReadKeys, endpoint); err != nil {
 		return err
@@ -134,7 +135,7 @@ func (c *KeyVizCollect) Collect(ctx context.Context, token string, endpoint stri
 	return nil
 }
 
-func (c *KeyVizCollect) queryHeapMap(ctx context.Context, token string, typ string, endpoint string) error {
+func (c *KeyVizCollect) queryHeapMap(ctx context.Context, token string, typ string, endpoint *url.URL) error {
 	param := QueryHeatMapParam{
 		Type:      typ,
 		Starttime: c.beginTS,
@@ -146,7 +147,7 @@ func (c *KeyVizCollect) queryHeapMap(ctx context.Context, token string, typ stri
 		return err
 	}
 
-	u := fmt.Sprintf("http://%s%s?%s", endpoint, heatmapAPIPath, q)
+	u := fmt.Sprintf("%s%s?%s", endpoint.String(), heatmapAPIPath, q)
 	h := map[string]string{
 		"Authorization": fmt.Sprintf("Bearer %s", token),
 	}
