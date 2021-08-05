@@ -31,12 +31,11 @@ func metricsCmd() *cobra.Command {
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			if len(output) == 0 {
 				_ = cmd.Help()
-				return errors.New("miss output flag")
+				return errors.New("missing output flag")
 			}
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Printf("run merge %+v\n", merge)
 			// TODO: init the related component and start the process
 			topo := make([]prom.Endpoint, 0, len(hosts))
 			for _, h := range hosts {
@@ -80,7 +79,6 @@ func metricsCmd() *cobra.Command {
 					return err
 				}
 			}
-
 			mc, err := prom.NewMetricsCollect(
 				prom.WithHttpCli(cli),
 				prom.WithTimeRange(begin, end),

@@ -59,3 +59,15 @@ func TestMetricCollect_Collect(t *testing.T) {
 	//	}
 	//}
 }
+
+func Test_ParseTimeRange(t *testing.T) {
+	begin := "2021-08-02T17:11:50+08:00"
+	end := "2021-08-03T17:11:50+08:00"
+	ts,_, err := parseTimeRange(begin, end)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, s := range ts {
+		t.Log(s)
+	}
+}
