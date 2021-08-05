@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/mashenjun/mole/collector"
+	"github.com/mashenjun/mole/collector/schema"
 	"github.com/mashenjun/mole/desensitize"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
@@ -14,17 +14,17 @@ import (
 
 func schemaCmd() *cobra.Command {
 	// for connect to the database
-	cfg := collector.MysqlConfig{}
+	cfg := schema.MysqlConfig{}
 	// for init the aes encrypt
 	sk := ""
 	// outPath is where store the schema sql collected
 	output := ""
 	// list of databases want to collect schema from
 	databases := make([]string,0)
-	//user := ""
-	//pwd := ""
-	//host := ""
-	//port := ""
+	// user := ""
+	// pwd := ""
+	// host := ""
+	// port := ""
 	cmd := &cobra.Command{
 		Use:   `schema`,
 		Short: `collect schema from target databases`,
@@ -47,7 +47,7 @@ func schemaCmd() *cobra.Command {
 				fmt.Printf("make dir error: %+v\n", err)
 				return err
 			}
-			db, err := collector.Dial(&cfg)
+			db, err := schema.Dial(&cfg)
 			if err != nil {
 				fmt.Printf("dail database error: %+v\n", err)
 				return err
@@ -60,7 +60,7 @@ func schemaCmd() *cobra.Command {
 					fmt.Printf("access output file error: %+v\n", err)
 					return err
 				}
-				sc, err := collector.NewSchemaCollector(db, database)
+				sc, err := schema.NewSchemaCollector(db, database)
 				if err != nil {
 					fmt.Printf("new schema collector error: %+v\n", err)
 					return err

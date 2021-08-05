@@ -1,14 +1,12 @@
 package main
 
 import (
-	"fmt"
 	"github.com/spf13/cobra"
 	"os"
 )
 
 func main() {
 	if err := command().Execute(); err != nil {
-		fmt.Println(err)
 		os.Exit(-1)
 	}
 }
@@ -26,10 +24,12 @@ func command() *cobra.Command {
 		SilenceUsage: true,
 	}
 	cmd.CompletionOptions.DisableDefaultCmd = true
+	cmd.SilenceErrors = true
 	cmd.AddCommand(
 		schemaCmd(),
 		metricsCmd(),
 		keyvizCmd(),
+		convertCmd(),
 	)
 	return cmd
 }

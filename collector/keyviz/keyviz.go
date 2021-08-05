@@ -19,6 +19,8 @@ const (
 
 	heatMapTypeReadKeys  = "read_keys"
 	heatMapTypeReadBytes = "read_bytes"
+	heatMapTypeWriteKeys = "write_keys"
+	headMapTypeWriteBytes = "write_bytes"
 
 	loginTypePassword = 0
 	loginTypeCode = 1
@@ -130,6 +132,12 @@ func (c *KeyVizCollect) Collect(ctx context.Context, token string, endpoint *url
 		return err
 	}
 	if err := c.queryHeapMap(ctx, token, heatMapTypeReadBytes, endpoint); err != nil {
+		return err
+	}
+	if err := c.queryHeapMap(ctx, token, heatMapTypeWriteKeys, endpoint); err != nil {
+		return err
+	}
+	if err := c.queryHeapMap(ctx, token, headMapTypeWriteBytes, endpoint); err != nil {
 		return err
 	}
 	return nil

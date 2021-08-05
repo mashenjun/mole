@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	metricStep = 15 // use 15s step
+	metricStep = 15 // use 15s step, also 15 seconds is the minimal step
 )
 
 // CollectStat is estimated size stats of data to be collected
@@ -37,10 +37,12 @@ type MetricsCollect struct {
 	timeSteps    []string
 	rawMetrics   []string        // raw metric list
 	cookedRecord []MetricsRecord // cooked metric list
-	targetRecord []MetricsRecord
+	targetRecord []MetricsRecord // merge raw metrics and cooked metrics
 	concurrency  int
-	scrapeBegin  string // time range to filter metrics.
-	scrapeEnd    string // time range to filter metrics.
+	scrapeBegin  string    // time range to filter metrics.
+	scrapeEnd    string    // time range to filter metrics.
+	beginTime    time.Time // helper fields just to gen dir name
+	endTime      time.Time // helper fields just to gen dir name
 	cli          *http.Client
 	outputDir    string // dir where the metrics data will be stored.
 	merge        bool
@@ -58,6 +60,20 @@ func WithTimeRange(begin, end string) MetricsCollectOpt {
 		collect.timeSteps = steps
 		collect.scrapeBegin = begin
 		collect.scrapeEnd = end
+		{
+			ts, err := time.Parse(time.RFC3339, begin)
+			if err != nil {
+				return err
+			}
+			collect.beginTime = ts
+		}
+		{
+			ts, err := time.Parse(time.RFC3339, end)
+			if err != nil {
+				return err
+			}
+			collect.endTime = ts
+		}
 		return nil
 	}
 }
@@ -111,7 +127,6 @@ func NewMetricsCollect(opts ...MetricsCollectOpt) (*MetricsCollect, error) {
 			return nil, err
 		}
 	}
-	fmt.Printf("new merge %+v\n", mc.merge)
 	return mc, nil
 }
 
@@ -130,8 +145,8 @@ func (c *MetricsCollect) SetCookedRecord(cr []MetricsRecord) {
 
 type Endpoint struct {
 	Schema string
-	Host string
-	Port string
+	Host   string
+	Port   string
 }
 
 // Prepare implements the Collector interface
@@ -162,6 +177,7 @@ func (c *MetricsCollect) Prepare(topo []Endpoint) (map[string][]CollectStat, err
 	if !queryOK {
 		return nil, queryErr
 	}
+	// merge raw metrics and cooked metrics as target metrics
 	for _, mtc := range c.rawMetrics {
 		c.targetRecord = append(c.targetRecord, MetricsRecord{
 			Record: mtc,
@@ -223,9 +239,8 @@ func (c *MetricsCollect) Collect(topo []Endpoint) error {
 					})
 				}
 				mu.Unlock()
-
 				tl.Put(tok)
-			}(tl.Get(), r.Record, r.Expr )
+			}(tl.Get(), r.Record, r.Expr)
 		}
 
 		for _, cr := range c.cookedRecord {
@@ -286,12 +301,21 @@ func (c *MetricsCollect) collectMetric(prom Endpoint, ts []string, mtc string, e
 	for i := 0; i < len(ts)-1; i++ {
 		if err := tiuputils.Retry(
 			func() error {
+				start, end := ts[i], ts[i+1]
+				if start != end {
+					// offset end by 1 second
+					et, err := time.Parse(time.RFC3339, end)
+					if err != nil {
+						return err
+					}
+					end = et.Add(-1 * time.Second).Format(time.RFC3339)
+				}
 				resp, err := c.cli.PostForm(
 					fmt.Sprintf("%s/api/v1/query_range", promAddr),
 					url.Values{
 						"query": {expr},
-						"start": {ts[i]},
-						"end":   {ts[i+1]},
+						"start": {start},
+						"end":   {end},
 						"step":  {strconv.Itoa(metricStep)},
 					},
 				)
@@ -305,7 +329,7 @@ func (c *MetricsCollect) collectMetric(prom Endpoint, ts []string, mtc string, e
 					return err
 				}
 				// implement 2
-				// the following implement is write the response to file
+				// the following implementation writes response body to file directly
 				filename := c.genFileName(mtc, i)
 				topoDir := c.genDirName(prom)
 				dst, err := os.OpenFile(
@@ -317,10 +341,13 @@ func (c *MetricsCollect) collectMetric(prom Endpoint, ts []string, mtc string, e
 				}
 				defer dst.Close()
 
-				_, err = io.Copy(dst, resp.Body)
+				cnt, err := io.Copy(dst, resp.Body)
 				if err != nil {
 					fmt.Printf("write metric %s to file error: %s, retry...\n", mtc, err)
 					return err
+				}
+				if cnt == 0 {
+					fmt.Println("warning, zero bytes in response body")
 				}
 				if c.merge {
 					if _, err := dst.Write([]byte("\n")); err != nil {
@@ -350,8 +377,11 @@ func (c *MetricsCollect) genFileName(mtc string, idx int) string {
 	return fmt.Sprintf("%s-%v.json", mtc, idx)
 }
 
+// the dir name should also include the timestamp range.
 func (c *MetricsCollect) genDirName(ep Endpoint) string {
-	return fmt.Sprintf("%s-%v", ep.Host, ep.Port)
+	return fmt.Sprintf("%s-%v-%s-%s", ep.Host, ep.Port,
+		c.beginTime.Format("060102T15:04:05Z07:00"),
+		c.endTime.Format("060102T15:04:05Z07:00"))
 }
 
 func parseTimeRange(scrapeStart, scrapeEnd string) ([]string, int64, error) {
@@ -387,7 +417,7 @@ func parseTimeRange(scrapeStart, scrapeEnd string) ([]string, int64, error) {
 		}
 		next := cursor.Add(block)
 		if next.Before(tsEnd) {
-			ts = append(ts, cursor.Format(time.RFC3339))
+			ts = append(ts, next.Format(time.RFC3339))
 		} else {
 			ts = append(ts, tsEnd.Format(time.RFC3339))
 			break
