@@ -1,4 +1,4 @@
-package convertor
+package prom
 
 import (
 	"encoding/json"
@@ -9,7 +9,7 @@ import (
 // copy from prometheus client golang.
 
 type MetricsResp struct {
-	Status string             `json:"status"`
+	Status string              `json:"status"`
 	Data   *MetricsQueryResult `json:"data"`
 }
 
