@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gorilla/schema"
+	"github.com/mashenjun/mole/consts"
 	"github.com/mashenjun/mole/utils"
 	"io"
 	"net/http"
@@ -16,11 +17,6 @@ import (
 const (
 	loginAPIPath   = "/dashboard/api/user/login"
 	heatmapAPIPath = "/dashboard/api/keyvisual/heatmaps"
-
-	heatMapTypeReadKeys  = "read_keys"
-	heatMapTypeReadBytes = "read_bytes"
-	heatMapTypeWriteKeys = "write_keys"
-	headMapTypeWriteBytes = "write_bytes"
 
 	loginTypePassword = 0
 	loginTypeCode = 1
@@ -127,18 +123,18 @@ func (c *KeyVizCollect) Login(ctx context.Context, endpoint *url.URL) (string, e
 }
 
 func (c *KeyVizCollect) Collect(ctx context.Context, token string, endpoint *url.URL) error {
-	// query read bytes
-	if err := c.queryHeapMap(ctx, token, heatMapTypeReadKeys, endpoint); err != nil {
-		return err
+	// query content form api
+	if err := c.queryHeapMap(ctx, token, consts.HeatMapTypeReadKeys, endpoint); err != nil {
+		return fmt.Errorf("query %s error: %w", consts.HeatMapTypeReadKeys, err)
 	}
-	if err := c.queryHeapMap(ctx, token, heatMapTypeReadBytes, endpoint); err != nil {
-		return err
+	if err := c.queryHeapMap(ctx, token, consts.HeatMapTypeReadBytes, endpoint); err != nil {
+		return fmt.Errorf("query %s error: %w", consts.HeatMapTypeReadBytes, err)
 	}
-	if err := c.queryHeapMap(ctx, token, heatMapTypeWriteKeys, endpoint); err != nil {
-		return err
+	if err := c.queryHeapMap(ctx, token, consts.HeatMapTypeWriteKeys, endpoint); err != nil {
+		return fmt.Errorf("query %s error: %w", consts.HeatMapTypeWriteKeys, err)
 	}
-	if err := c.queryHeapMap(ctx, token, headMapTypeWriteBytes, endpoint); err != nil {
-		return err
+	if err := c.queryHeapMap(ctx, token, consts.HeadMapTypeWriteBytes, endpoint); err != nil {
+		return fmt.Errorf("query %s error: %w", consts.HeadMapTypeWriteBytes, err)
 	}
 	return nil
 }
