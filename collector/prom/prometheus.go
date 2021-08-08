@@ -380,8 +380,8 @@ func (c *MetricsCollect) genFileName(mtc string, idx int) string {
 // the dir name should also include the timestamp range.
 func (c *MetricsCollect) genDirName(ep Endpoint) string {
 	return fmt.Sprintf("%s-%v-%s-%s", ep.Host, ep.Port,
-		c.beginTime.Format("060102T15:04:05Z07:00"),
-		c.endTime.Format("060102T15:04:05Z07:00"))
+		c.beginTime.Format("060102T150405Z0700"),
+		c.endTime.Format("060102T150405Z0700"))
 }
 
 func parseTimeRange(scrapeStart, scrapeEnd string) ([]string, int64, error) {
