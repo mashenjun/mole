@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 const (
@@ -19,7 +20,7 @@ const (
 	heatmapAPIPath = "/dashboard/api/keyvisual/heatmaps"
 
 	loginTypePassword = 0
-	loginTypeCode = 1
+	loginTypeCode     = 1
 )
 
 var formEncoder *schema.Encoder
@@ -28,17 +29,18 @@ func init() {
 	formEncoder = schema.NewEncoder()
 }
 
-
 // KeyVizCollect is the collector collecting heatmap form dashboard
 type KeyVizCollect struct {
 	//endpoint    string
-	cli         *utils.HttpClient
-	outputDir   string // dir where the metrics data will be stored.
-	loginMode   string
-	username    string
-	password    string
-	beginTS     int64
-	endTS       int64
+	cli       *utils.HttpClient
+	outputDir string // dir where the metrics data will be stored.
+	loginMode string
+	username  string
+	password  string
+	beginTime time.Time
+	beginTS   int64
+	endTime   time.Time
+	endTS     int64
 }
 
 type CollectOpt func(c *KeyVizCollect) error
@@ -53,6 +55,8 @@ func WithTimeRange(begin, end string) CollectOpt {
 		if err != nil {
 			return err
 		}
+		collect.beginTime = st
+		collect.endTime = et
 		collect.beginTS = st.Unix()
 		collect.endTS = et.Unix()
 		return nil
@@ -68,7 +72,7 @@ func WithHttpClient(cli *http.Client) CollectOpt {
 
 func WithOutput(output string) CollectOpt {
 	return func(c *KeyVizCollect) error {
-		if err := utils.EnsureDir(output); err != nil{
+		if err := utils.EnsureDir(output); err != nil {
 			return err
 		}
 		c.outputDir = output
@@ -76,7 +80,7 @@ func WithOutput(output string) CollectOpt {
 	}
 }
 
-func NewKeyVizCollect(opts...CollectOpt) (*KeyVizCollect, error) {
+func NewKeyVizCollect(opts ...CollectOpt) (*KeyVizCollect, error) {
 	c := &KeyVizCollect{}
 	for _, opt := range opts {
 		if err := opt(c); err != nil {
@@ -85,7 +89,6 @@ func NewKeyVizCollect(opts...CollectOpt) (*KeyVizCollect, error) {
 	}
 	return c, nil
 }
-
 
 func (c *KeyVizCollect) SetUserPwd(user string, pwd string) {
 	c.username = user
@@ -102,19 +105,17 @@ func (c *KeyVizCollect) SetSessionCode(code string) {
 func (c *KeyVizCollect) Login(ctx context.Context, endpoint *url.URL) (string, error) {
 	param := LoginParam{}
 
-	if c.loginMode == "password"{
+	if c.loginMode == "password" {
 		param.Type = loginTypePassword
 		param.Username = c.username
 		param.Password = c.password
-	}else if c.loginMode == "code" {
+	} else if c.loginMode == "code" {
 		param.Type = loginTypeCode
 		param.Password = c.password
-	}else {
+	} else {
 		return "", errors.New("login mode not support")
 	}
 	data := LoginData{}
-	fmt.Printf("param %+v\n",param)
-
 	u := fmt.Sprintf("%s%s", endpoint.String(), loginAPIPath)
 	if err := c.cli.CallWithJson(ctx, &data, http.MethodPost, u, param); err != nil {
 		return "", err
@@ -123,6 +124,9 @@ func (c *KeyVizCollect) Login(ctx context.Context, endpoint *url.URL) (string, e
 }
 
 func (c *KeyVizCollect) Collect(ctx context.Context, token string, endpoint *url.URL) error {
+	if err := utils.EnsureDir(c.outputDir, c.genDirName()); err != nil {
+		return err
+	}
 	// query content form api
 	if err := c.queryHeapMap(ctx, token, consts.HeatMapTypeReadKeys, endpoint); err != nil {
 		return fmt.Errorf("query %s error: %w", consts.HeatMapTypeReadKeys, err)
@@ -167,10 +171,10 @@ func (c *KeyVizCollect) queryHeapMap(ctx context.Context, token string, typ stri
 	}
 	dst, err := os.OpenFile(
 		filepath.Join(
-			c.outputDir, fmt.Sprintf("%s.json", typ),
+			c.outputDir, c.genDirName(), fmt.Sprintf("%s.json", typ),
 		), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
-		fmt.Printf("open file error: %+v\n",err)
+		fmt.Printf("open file error: %+v\n", err)
 		return err
 	}
 	defer dst.Close()
@@ -183,6 +187,11 @@ func (c *KeyVizCollect) queryHeapMap(ctx context.Context, token string, typ stri
 	return nil
 }
 
+func (c *KeyVizCollect) genDirName() string {
+	return fmt.Sprintf("%s-%s",
+		c.beginTime.Format("060102T150405Z0700"),
+		c.endTime.Format("060102T150405Z0700"))
+}
 
 // proto struct for api request parameter and response data
 
@@ -205,7 +214,7 @@ type QueryHeatMapParam struct {
 
 func (p *QueryHeatMapParam) ToQueryString() (string, error) {
 	dst := make(url.Values)
-	if err:= formEncoder.Encode(p, dst); err != nil {
+	if err := formEncoder.Encode(p, dst); err != nil {
 		return "", err
 	}
 	return dst.Encode(), nil
