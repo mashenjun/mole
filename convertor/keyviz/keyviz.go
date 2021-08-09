@@ -3,11 +3,13 @@ package keyviz
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/mashenjun/mole/consts"
 	"github.com/pingcap/tidb-dashboard/pkg/keyvisual/matrix"
 	"io/ioutil"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -16,13 +18,17 @@ type HeatmapConvertor struct {
 	// 左闭右闭
 	from int64
 	to int64
-
+	// native way to define the filter rule
+	filterTable map[string]map[string]struct{} // db name -> (table name -> struct)
 }
 
 type HeatmapConvertorConvertorOpt func(*HeatmapConvertor) error
 
 func NewHeatmapConvertor(opts... HeatmapConvertorConvertorOpt) (*HeatmapConvertor, error) {
-	mmc := &HeatmapConvertor{sink: make(chan []string, 42)}
+	mmc := &HeatmapConvertor{
+		sink:        make(chan []string, 42),
+		filterTable: make(map[string]map[string]struct{}),
+	}
 	for _, opt := range opts {
 		if err := opt(mmc); err != nil {
 			return nil, err
@@ -48,6 +54,24 @@ func WithTimeRange(begin string, end string) HeatmapConvertorConvertorOpt {
 			convertor.to = ts.Unix()
 		}
 		return nil
+	}
+}
+
+// SetFilterRules is more easy to use in caller side.
+func (c *HeatmapConvertor) SetFilterRules(rules []string) {
+	var alwaysMath = map[string]struct{}{
+		"*": {},
+	}
+	for _, rule := range rules {
+		sl := strings.Split(strings.TrimSuffix(rule, ":"), ":")
+		if len(sl) == 1 {
+			c.filterTable[sl[0]] = alwaysMath
+		}else {
+			if _, ok := c.filterTable[sl[0]]; !ok {
+				c.filterTable[sl[0]] = make(map[string]struct{})
+			}
+			c.filterTable[sl[0]][sl[1]] = struct{}{}
+		}
 	}
 }
 
@@ -92,7 +116,7 @@ func (c *HeatmapConvertor) filterAndSink(mat *matrix.Matrix) error {
 		}
 		row := []string{strconv.FormatInt(ts, 10)}
 		for j := 0; j <= len(data[i]); j++ {
-			if !isTarget(mat.KeyAxis[j].Labels) {
+			if !c.isTarget(mat.KeyAxis[j].Labels) {
 				continue
 			}
 			row = append(row, strconv.FormatUint(data[i][j], 10))
@@ -131,13 +155,28 @@ func (c *HeatmapConvertor) inRange(ts int64) bool {
 	return true
 }
 
-func isTarget(labels []string) bool {
-	if len(labels) == 0 {
+func (c *HeatmapConvertor) isTarget(labels []string) bool {
+	if len(labels) <= 1 {
 		return false
 	}
 	// mysql table is for meta data, skip
 	if labels[0] == "mysql" || labels[0] == "meta" {
 		return false
 	}
+	if len(c.filterTable) == 0 {
+		return true
+	}
+	if tbl, ok := c.filterTable[labels[0]]; !ok {
+		return false
+	}else {
+		if _, find := tbl["*"]; find {
+			fmt.Println(labels)
+			return true
+		}
+		if _, find := tbl[labels[1]]; !find {
+			return false
+		}
+	}
+
 	return true
 }

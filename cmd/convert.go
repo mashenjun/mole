@@ -19,6 +19,7 @@ func convertCmd() *cobra.Command {
 		begin  = ""
 		end    = ""
 		format = ""
+		filters = make([]string, 0)
 	)
 	cmd := &cobra.Command{
 		Use:   `convert`,
@@ -33,24 +34,28 @@ func convertCmd() *cobra.Command {
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var c convertor.IConvert
-			var err error
 			switch format {
 			case "prom":
-				c, err = prom.NewMetricsMatrixConvertor(
+				mcc, err := prom.NewMetricsMatrixConvertor(
 					prom.WithTimeRange(begin, end),
 				)
 				if err != nil {
 					fmt.Printf("new MetricsMatrixConvertor error: %v\n", err)
 					return err
 				}
+				c = mcc
 			case "heatmap":
-				c, err = keyviz.NewHeatmapConvertor(
+				hc, err := keyviz.NewHeatmapConvertor(
 					keyviz.WithTimeRange(begin, end),
 				)
 				if err != nil {
 					fmt.Printf("new NewHeatmapConvertor error: %v\n", err)
 					return err
 				}
+				if len(filters) > 0 {
+					hc.SetFilterRules(filters)
+				}
+				c = hc
 			default:
 				fmt.Printf("format %v is not supported\n", format)
 				return fmt.Errorf("format %v is not supported", format)
@@ -82,5 +87,6 @@ func convertCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&begin, "from", "f", "", "start time point filter timeseries data")
 	cmd.Flags().StringVarP(&end, "to", "t", "", "stop time point filter timeseries data")
 	cmd.Flags().StringVarP(&format, "format", "", "", "source data format, possible value is [prom|heatmap]")
+	cmd.Flags().StringSliceVarP(&filters, "filters", "", nil, "list of filter rule with db:table format")
 	return cmd
 }
