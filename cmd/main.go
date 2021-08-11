@@ -30,6 +30,7 @@ func command() *cobra.Command {
 		metricsCmd(),
 		keyvizCmd(),
 		convertCmd(),
+		reshapeCmd(),
 	)
 	return cmd
 }

@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -47,6 +48,7 @@ type MetricsCollect struct {
 	outputDir    string // dir where the metrics data will be stored.
 	merge        bool
 	fileFlag     int // file flag used to open file
+	continues bool
 }
 
 type MetricsCollectOpt func(*MetricsCollect) error
@@ -114,6 +116,13 @@ func WithOutputDir(output string) MetricsCollectOpt {
 			return err
 		}
 		collect.outputDir = output
+		return nil
+	}
+}
+
+func WithContinues(continues bool) MetricsCollectOpt {
+	return func(collect *MetricsCollect) error {
+		collect.continues = continues
 		return nil
 	}
 }
@@ -197,7 +206,7 @@ func (c *MetricsCollect) Collect(topo []Endpoint) error {
 	// we may not need the multi bar
 	mb := progress.NewMultiBar("+ Dumping metrics")
 	bars := make(map[string]*progress.MultiBarItem)
-	total := len(c.rawMetrics) + len(c.cookedRecord)
+	total := len(c.targetRecord)
 	mu := sync.Mutex{}
 	for _, prom := range topo {
 		key := fmt.Sprintf("%s:%v", prom.Host, prom.Port)
@@ -220,8 +229,26 @@ func (c *MetricsCollect) Collect(topo []Endpoint) error {
 			})
 			return err
 		}
-
+		// get existed metrics
+		existed, err := c.listExistedMetrics(filepath.Join(c.outputDir, c.genDirName(prom)))
+		if err != nil {
+			return err
+		}
 		for _, r := range c.targetRecord {
+			if _, ok := existed[r.Record]; ok {
+				bars[key].UpdateDisplay(&progress.DisplayProps{
+					Prefix: fmt.Sprintf("  - Querying server %s", key),
+					Suffix: fmt.Sprintf("skip %s ...", r.Record),
+				})
+				done++
+				if done >= total {
+					bars[key].UpdateDisplay(&progress.DisplayProps{
+						Prefix: fmt.Sprintf("  - Query server %s", key),
+						Mode:   progress.ModeDone,
+					})
+				}
+				continue
+			}
 			go func(tok *utils.Token, mtc string, expr string) {
 				bars[key].UpdateDisplay(&progress.DisplayProps{
 					Prefix: fmt.Sprintf("  - Querying server %s", key),
@@ -242,29 +269,6 @@ func (c *MetricsCollect) Collect(topo []Endpoint) error {
 				tl.Put(tok)
 			}(tl.Get(), r.Record, r.Expr)
 		}
-
-		for _, cr := range c.cookedRecord {
-			go func(tok *utils.Token, mtc string, expr string) {
-				bars[key].UpdateDisplay(&progress.DisplayProps{
-					Prefix: fmt.Sprintf("  - Querying server %s", key),
-					Suffix: fmt.Sprintf("%d/%d querying %s ...", done, total, mtc),
-				})
-				if err := c.collectMetric(prom, c.timeSteps, mtc, expr); err != nil {
-					fmt.Printf("collect metrics %+v error: %+v\n", mtc, err)
-				}
-				mu.Lock()
-				done++
-				if done >= total {
-					bars[key].UpdateDisplay(&progress.DisplayProps{
-						Prefix: fmt.Sprintf("  - Query server %s", key),
-						Mode:   progress.ModeDone,
-					})
-				}
-				mu.Unlock()
-
-				tl.Put(tok)
-			}(tl.Get(), cr.Record, cr.Expr)
-		}
 	}
 	tl.Wait()
 	return nil
@@ -272,10 +276,6 @@ func (c *MetricsCollect) Collect(topo []Endpoint) error {
 
 func (c *MetricsCollect) getMetricList(prom string) ([]string, error) {
 	if len(c.rawMetrics) > 0 {
-		// use url encode in case we use prom query in metrics list.
-		//for i := range c.metrics {
-		//	c.metrics[i] = url.QueryEscape(c.metrics[i])
-		//}
 		return c.rawMetrics, nil
 	}
 	resp, err := c.cli.Get(fmt.Sprintf("%s/api/v1/label/__name__/values", prom))
@@ -382,6 +382,24 @@ func (c *MetricsCollect) genDirName(ep Endpoint) string {
 	return fmt.Sprintf("%s-%v-%s-%s", ep.Host, ep.Port,
 		c.beginTime.Format("060102T150405Z0700"),
 		c.endTime.Format("060102T150405Z0700"))
+}
+
+func (c *MetricsCollect) listExistedMetrics(dir string) (map[string]struct{}, error) {
+	lookup := make(map[string]struct{})
+	if !c.continues {
+		return lookup, nil
+	}
+	ds, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+	for  _, d := range ds {
+		if d.IsDir() {
+			continue
+		}
+		lookup[strings.TrimSuffix(d.Name(), filepath.Ext(d.Name()))] = struct{}{}
+	}
+	return lookup, nil
 }
 
 func parseTimeRange(scrapeStart, scrapeEnd string) ([]string, int64, error) {

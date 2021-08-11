@@ -18,6 +18,9 @@ type MetricsMatrixConvertor struct {
 	// 左闭右闭
 	from time.Time
 	to time.Time
+	filterLabels []model.LabelSet
+	input string
+	headerSend bool
 }
 
 type MetricsMatrixConvertorOpt func(*MetricsMatrixConvertor) error
@@ -52,16 +55,28 @@ func WithTimeRange(begin string, end string) MetricsMatrixConvertorOpt {
 	}
 }
 
+func WithInput(input string) MetricsMatrixConvertorOpt {
+	return func(convertor *MetricsMatrixConvertor) error {
+		convertor.input = input
+		return nil
+	}
+}
+
+// SetFilterLabels is more easy to use in caller side.
+func (c *MetricsMatrixConvertor) SetFilterLabels(labels []model.LabelSet) {
+	c.filterLabels = labels
+}
+
 func (c *MetricsMatrixConvertor) GetSink() <-chan []string {
 	return c.sink
 }
 
 // Convert converts metrics json to csv to help `numpy` to do data processing, a very native implementation
-func (c *MetricsMatrixConvertor) Convert(input string) error {
+func (c *MetricsMatrixConvertor) Convert() error {
 	defer close(c.sink)
 	// 1. read input file and json marshal to metrics struct
 	// 2. select interested metrics by labels and write to csv
-	source, err := os.Open(input)
+	source, err := os.Open(c.input)
 	if err != nil {
 		return err
 	}
@@ -96,30 +111,37 @@ func (c *MetricsMatrixConvertor) filterAndSink(b []byte, filter model.LabelSet) 
 		return fmt.Errorf("type %t is not supported", resp.Data.v)
 	}
 	// TODO: each sample series may have different time point.
-	//csvHeader := extractHeader(matrix)
-	c.sink <- extractHeader(matrix)
+	if !c.headerSend {
+		c.sink <- extractHeader(matrix)
+		c.headerSend = true
+	}
 	align, total := checkAlign(matrix)
-	if align {
-		idx := 0
-		for idx < total {
-			row := make([]string, 0)
-			for _, sampleStream := range matrix {
-				pair := sampleStream.Values[idx]
-				if !c.inRange(pair.Timestamp.Time()){
-					continue
-				}
-				if len(row) == 0 {
-					// append timestamp first
-					row = append(row, strconv.FormatInt(pair.Timestamp.Unix(), 10))
-				}
-				row = append(row, pair.Value.String())
-			}
-			c.sink <- row
-			idx++
-		}
-	}else {
+	if !align {
 		fmt.Println("not aligned")
-		// TODO: case that timestamp is not aligned
+
+	}
+	idx := 0
+	for idx < total {
+		row := make([]string, 0)
+		for _, sampleStream := range matrix {
+			// filter on label set
+			if !c.matchLabels(model.LabelSet(sampleStream.Metric)) {
+				continue
+			}
+			// filter on timestamp
+			pair := sampleStream.Values[idx]
+			if !c.inRange(pair.Timestamp.Time()){
+				continue
+			}
+			// append timestamp first
+			if len(row) == 0 {
+				row = append(row, strconv.FormatInt(pair.Timestamp.Unix(), 10))
+			}
+			// append data
+			row = append(row, pair.Value.String())
+		}
+		c.sink <- row
+		idx++
 	}
 	return nil
 }
@@ -133,6 +155,28 @@ func (c *MetricsMatrixConvertor) inRange(t time.Time) bool {
 	}
 	if !c.from.IsZero() && t.Before(c.from) {
 		return false
+	}
+	return true
+}
+
+func (c *MetricsMatrixConvertor) matchLabels(target model.LabelSet) bool {
+	if len(c.filterLabels) == 0 {
+		return true
+	}
+	for _, query := range c.filterLabels {
+		if match(query, target) {
+			return true
+		}
+	}
+	return false
+}
+
+func match(query model.LabelSet, target model.LabelSet) bool {
+	for name, v := range query{
+		value, ok := target[name]
+		if ok && value != v {
+			return false
+		}
 	}
 	return true
 }

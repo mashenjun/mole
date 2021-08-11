@@ -6,15 +6,14 @@ import (
 )
 
 func TestMetricsMatrixConvertor_Convert(t *testing.T) {
-	mmc, err := NewMetricsMatrixConvertor()
+	input := os.Getenv("INPUT_FILE")
+	mmc, err := NewMetricsMatrixConvertor(WithInput(input))
 	if err != nil {
 		t.Fatal(err)
 	}
-	input := os.Getenv("INPUT_FILE")
-	t.Log(input)
 	sink := mmc.GetSink()
 	go func() {
-		if err := mmc.Convert(input); err != nil {
+		if err := mmc.Convert(); err != nil {
 			t.Error(err)
 			return
 		}

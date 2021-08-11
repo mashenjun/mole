@@ -22,7 +22,8 @@ func metricsCmd() *cobra.Command {
 		output            = ""
 		merge             = true
 		hosts             = make([]string, 0)
-		target            = ""
+		target    = ""
+		continues = false
 	)
 
 	cmd := &cobra.Command{
@@ -85,6 +86,7 @@ func metricsCmd() *cobra.Command {
 				prom.WithConcurrency(int(concurrency)),
 				prom.WithMerge(merge),
 				prom.WithOutputDir(output),
+				prom.WithContinues(continues),
 			)
 			if err != nil {
 				fmt.Printf("new metrics collect error: %+v\n", err)
@@ -112,6 +114,7 @@ func metricsCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&merge, "merge", "m", true, "merge content of different range for one metrics into one file")
 	cmd.Flags().StringSliceVarP(&hosts, "hosts", "H", nil, "hosts list with schema://ip:port format")
 	cmd.Flags().StringVarP(&target, "target", "T", "", "path to yaml file containing target metrics")
+	cmd.Flags().BoolVarP(&continues, "continues", "C", false, "set the collect to skip the existed metrics")
 	return cmd
 }
 

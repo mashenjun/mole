@@ -28,7 +28,7 @@ func convertCmd() *cobra.Command {
 			if len(input) == 0 || len(output) == 0 || len(format) == 0 {
 				fmt.Println("input or output or format is not provided")
 				_ = cmd.Help()
-				return errors.New("input or output of format is not provided")
+				return errors.New("input or output or format is not provided")
 			}
 			return nil
 		},
@@ -38,6 +38,7 @@ func convertCmd() *cobra.Command {
 			case "prom":
 				mcc, err := prom.NewMetricsMatrixConvertor(
 					prom.WithTimeRange(begin, end),
+					prom.WithInput(input),
 				)
 				if err != nil {
 					fmt.Printf("new MetricsMatrixConvertor error: %v\n", err)
@@ -47,6 +48,7 @@ func convertCmd() *cobra.Command {
 			case "heatmap":
 				hc, err := keyviz.NewHeatmapConvertor(
 					keyviz.WithTimeRange(begin, end),
+					keyviz.WithInput(input),
 				)
 				if err != nil {
 					fmt.Printf("new NewHeatmapConvertor error: %v\n", err)
@@ -69,7 +71,7 @@ func convertCmd() *cobra.Command {
 
 			errG, ctx := errgroup.WithContext(context.Background())
 			errG.Go(func() error {
-				return c.Convert(input)
+				return c.Convert()
 			})
 			errG.Go(func() error {
 				return d.Start(ctx)
@@ -84,9 +86,9 @@ func convertCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&input, "input", "i", "", "the input file used to store metrics data")
 	cmd.Flags().StringVarP(&output, "output", "o", "", "the output file used to store csv data")
-	cmd.Flags().StringVarP(&begin, "from", "f", "", "start time point filter timeseries data")
-	cmd.Flags().StringVarP(&end, "to", "t", "", "stop time point filter timeseries data")
+	cmd.Flags().StringVarP(&begin, "from", "f", "", "start time point to filter timeseries data")
+	cmd.Flags().StringVarP(&end, "to", "t", "", "end time point to filter timeseries data")
 	cmd.Flags().StringVarP(&format, "format", "", "", "source data format, possible value is [prom|heatmap]")
-	cmd.Flags().StringSliceVarP(&filters, "filters", "", nil, "list of filter rule with db:table format")
+	cmd.Flags().StringSliceVarP(&filters, "filters", "", nil, "list of filter rule with db:table format, only used for heatmap data")
 	return cmd
 }
