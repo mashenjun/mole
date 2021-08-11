@@ -2,6 +2,6 @@ package convertor
 
 type IConvert interface {
 	// TODO: change the string to fs.File instead
-	Convert(string) error
+	Convert() error
 	GetSink() <-chan []string
 }

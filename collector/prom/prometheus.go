@@ -206,7 +206,7 @@ func (c *MetricsCollect) Collect(topo []Endpoint) error {
 	// we may not need the multi bar
 	mb := progress.NewMultiBar("+ Dumping metrics")
 	bars := make(map[string]*progress.MultiBarItem)
-	total := len(c.rawMetrics) + len(c.cookedRecord)
+	total := len(c.targetRecord)
 	mu := sync.Mutex{}
 	for _, prom := range topo {
 		key := fmt.Sprintf("%s:%v", prom.Host, prom.Port)
@@ -268,43 +268,6 @@ func (c *MetricsCollect) Collect(topo []Endpoint) error {
 				mu.Unlock()
 				tl.Put(tok)
 			}(tl.Get(), r.Record, r.Expr)
-		}
-
-		for _, cr := range c.cookedRecord {
-			if _, ok := existed[cr.Record]; ok {
-				bars[key].UpdateDisplay(&progress.DisplayProps{
-					Prefix: fmt.Sprintf("  - Querying server %s", key),
-					Suffix: fmt.Sprintf("skip %s ...", cr.Record),
-				})
-				done++
-				if done >= total {
-					bars[key].UpdateDisplay(&progress.DisplayProps{
-						Prefix: fmt.Sprintf("  - Query server %s", key),
-						Mode:   progress.ModeDone,
-					})
-				}
-				continue
-			}
-			go func(tok *utils.Token, mtc string, expr string) {
-				bars[key].UpdateDisplay(&progress.DisplayProps{
-					Prefix: fmt.Sprintf("  - Querying server %s", key),
-					Suffix: fmt.Sprintf("%d/%d querying %s ...", done, total, mtc),
-				})
-				if err := c.collectMetric(prom, c.timeSteps, mtc, expr); err != nil {
-					fmt.Printf("collect metrics %+v error: %+v\n", mtc, err)
-				}
-				mu.Lock()
-				done++
-				if done >= total {
-					bars[key].UpdateDisplay(&progress.DisplayProps{
-						Prefix: fmt.Sprintf("  - Query server %s", key),
-						Mode:   progress.ModeDone,
-					})
-				}
-				mu.Unlock()
-
-				tl.Put(tok)
-			}(tl.Get(), cr.Record, cr.Expr)
 		}
 	}
 	tl.Wait()

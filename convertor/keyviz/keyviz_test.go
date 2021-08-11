@@ -6,15 +6,16 @@ import (
 )
 
 func TestHeatmapConvertor_Convert(t *testing.T) {
-	hc, err := NewHeatmapConvertor()
+	input := os.Getenv("INPUT_FILE")
+	t.Log(input)
+	hc, err := NewHeatmapConvertor(WithInput(input))
 	if err != nil {
 		t.Fatal(err)
 	}
-	input := os.Getenv("INPUT_FILE")
-	t.Log(input)
+
 	sink := hc.GetSink()
 	go func() {
-		if err := hc.Convert(input); err != nil {
+		if err := hc.Convert(); err != nil {
 			t.Error(err)
 			return
 		}

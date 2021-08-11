@@ -20,6 +20,7 @@ type HeatmapConvertor struct {
 	to int64
 	// native way to define the filter rule
 	filterTable map[string]map[string]struct{} // db name -> (table name -> struct)
+	input string
 }
 
 type HeatmapConvertorConvertorOpt func(*HeatmapConvertor) error
@@ -57,6 +58,16 @@ func WithTimeRange(begin string, end string) HeatmapConvertorConvertorOpt {
 	}
 }
 
+func WithInput(input string) HeatmapConvertorConvertorOpt {
+	return func(convertor *HeatmapConvertor) error {
+		if len(input) == 0 {
+			return errors.New("input is empty")
+		}
+		convertor.input = input
+		return nil
+	}
+}
+
 // SetFilterRules is more easy to use in caller side.
 func (c *HeatmapConvertor) SetFilterRules(rules []string) {
 	var alwaysMath = map[string]struct{}{
@@ -79,11 +90,11 @@ func (c *HeatmapConvertor) GetSink() <-chan []string {
 	return c.sink
 }
 
-func (c *HeatmapConvertor) Convert(input string) error {
+func (c *HeatmapConvertor) Convert() error {
 	defer close(c.sink)
 	// 1. read input file and json marshal to heatmap matrix struct
 	// 2. convert heatmap data to csv format
-	source, err := os.Open(input)
+	source, err := os.Open(c.input)
 	if err != nil {
 		return err
 	}
