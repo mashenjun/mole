@@ -20,6 +20,7 @@ type MetricsMatrixConvertor struct {
 	to time.Time
 	filterLabels []model.LabelSet
 	input string
+	headerSend bool
 }
 
 type MetricsMatrixConvertorOpt func(*MetricsMatrixConvertor) error
@@ -110,8 +111,10 @@ func (c *MetricsMatrixConvertor) filterAndSink(b []byte, filter model.LabelSet) 
 		return fmt.Errorf("type %t is not supported", resp.Data.v)
 	}
 	// TODO: each sample series may have different time point.
-	//csvHeader := extractHeader(matrix)
-	c.sink <- extractHeader(matrix)
+	if !c.headerSend {
+		c.sink <- extractHeader(matrix)
+		c.headerSend = true
+	}
 	align, total := checkAlign(matrix)
 	if !align {
 		fmt.Println("not aligned")
