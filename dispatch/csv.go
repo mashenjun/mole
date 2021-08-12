@@ -3,15 +3,16 @@ package dispatch
 import (
 	"context"
 	"encoding/csv"
+	"github.com/mashenjun/mole/proto"
 	"os"
 )
 
 type CSVDispatcher struct {
 	outputFile string
-	source    <-chan []string
+	source    <-chan *proto.CSVMsg
 }
 
-func NewCSVDispatcher(file string, source <-chan []string) (*CSVDispatcher, error) {
+func NewCSVDispatcher(file string, source <-chan *proto.CSVMsg) (*CSVDispatcher, error) {
 	d := &CSVDispatcher{
 		outputFile: file,
 		source:    source,
@@ -30,12 +31,12 @@ func (md *CSVDispatcher) Start(ctx context.Context) error {
 	lines := 0
 	for {
 		select {
-		case row, ok := <-md.source:
+		case msg, ok := <-md.source:
 			if !ok {
 				cw.Flush()
 				return nil
 			}
-			if err := cw.Write(row); err != nil {
+			if err := cw.Write(msg.Data); err != nil {
 				return err
 			}
 			lines++

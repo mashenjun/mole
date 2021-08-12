@@ -7,13 +7,13 @@ import (
 	"github.com/mashenjun/mole/dispatch"
 	"github.com/mashenjun/mole/utils"
 	"github.com/prometheus/common/model"
+	"golang.org/x/sync/errgroup"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
-	"golang.org/x/sync/errgroup"
 	"path/filepath"
 
-	"github.com/spf13/cobra"
 	"github.com/mashenjun/mole/convertor/prom"
+	"github.com/spf13/cobra"
 )
 
 func reshapeCmd() *cobra.Command {

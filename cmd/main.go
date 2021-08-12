@@ -31,6 +31,7 @@ func command() *cobra.Command {
 		keyvizCmd(),
 		convertCmd(),
 		reshapeCmd(),
+		splitCmd(),
 	)
 	return cmd
 }

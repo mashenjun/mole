@@ -12,16 +12,28 @@ func TestHeatmapConvertor_Convert(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	sink := hc.GetSink()
-	go func() {
-		if err := hc.Convert(); err != nil {
-			t.Error(err)
-			return
-		}
-	}()
-
+	//go func() {
+	//	if err := hc.Convert(); err != nil {
+	//		t.Error(err)
+	//		return
+	//	}
+	//}()
 	for s := range sink {
 		t.Log(s)
 	}
+}
+
+func TestNewGroupIndexConstructor(t *testing.T) {
+	gic := NewGroupIndexConstructor()
+
+	gic.Append("a",1)
+	gic.Append("a", 2)
+	gic.Append("b",3)
+	gic.Append("c", 4)
+	gi := gic.Result()
+	if len(gi) != 3 {
+		t.Fatal("not match")
+	}
+	t.Log(gi)
 }

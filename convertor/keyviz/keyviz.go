@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/mashenjun/mole/consts"
+	"github.com/mashenjun/mole/proto"
+	"github.com/pingcap/tidb-dashboard/pkg/keyvisual/decorator"
 	"github.com/pingcap/tidb-dashboard/pkg/keyvisual/matrix"
 	"io/ioutil"
 	"os"
@@ -14,20 +16,21 @@ import (
 )
 
 type HeatmapConvertor struct {
-	sink chan []string
+	sink chan *proto.CSVMsg
 	// 左闭右闭
 	from int64
 	to int64
 	// native way to define the filter rule
 	filterTable map[string]map[string]struct{} // db name -> (table name -> struct)
 	input string
+	split bool
 }
 
 type HeatmapConvertorConvertorOpt func(*HeatmapConvertor) error
 
 func NewHeatmapConvertor(opts... HeatmapConvertorConvertorOpt) (*HeatmapConvertor, error) {
 	mmc := &HeatmapConvertor{
-		sink:        make(chan []string, 42),
+		sink:        make(chan *proto.CSVMsg, 42),
 		filterTable: make(map[string]map[string]struct{}),
 	}
 	for _, opt := range opts {
@@ -68,6 +71,13 @@ func WithInput(input string) HeatmapConvertorConvertorOpt {
 	}
 }
 
+func WithSplit() HeatmapConvertorConvertorOpt {
+	return func(convertor *HeatmapConvertor) error {
+		convertor.split = true
+		return nil
+	}
+}
+
 // SetFilterRules is more easy to use in caller side.
 func (c *HeatmapConvertor) SetFilterRules(rules []string) {
 	var alwaysMath = map[string]struct{}{
@@ -86,7 +96,7 @@ func (c *HeatmapConvertor) SetFilterRules(rules []string) {
 	}
 }
 
-func (c *HeatmapConvertor) GetSink() <-chan []string {
+func (c *HeatmapConvertor) GetSink() <-chan *proto.CSVMsg {
 	return c.sink
 }
 
@@ -108,7 +118,11 @@ func (c *HeatmapConvertor) Convert() error {
 		return err
 	}
 	// convert to csv row format
-	return c.filterAndSink(&mat)
+	if c.split {
+		return c.filterAndSplit(&mat)
+	}else {
+		return c.filterAndSink(&mat)
+	}
 }
 
 func (c *HeatmapConvertor) filterAndSink(mat *matrix.Matrix) error {
@@ -132,7 +146,39 @@ func (c *HeatmapConvertor) filterAndSink(mat *matrix.Matrix) error {
 			}
 			row = append(row, strconv.FormatUint(data[i][j], 10))
 		}
-		c.sink <- row
+		c.sink <- &proto.CSVMsg{
+			Data:    row,
+		}
+	}
+	return nil
+}
+
+func (c *HeatmapConvertor) filterAndSplit(mat *matrix.Matrix) error {
+	// csv header row is not necessary for heatmap data
+	data, typ ,err := extractData(mat)
+	if err != nil {
+		return err
+	}
+	if len(data) == 0 {
+		return nil
+	}
+	groupIdxs := c.groupIndexByTable(mat.KeyAxis, data, typ)
+	for i:=0; i < len(data); i++ {
+		ts := mat.TimeAxis[i]
+		if !c.inRange(ts) {
+			continue
+		}
+
+		for _, gi := range groupIdxs {
+			row := []string{strconv.FormatInt(ts, 10)}
+			for _, j := range gi.index {
+				row = append(row, strconv.FormatUint(data[i][j],10))
+			}
+			c.sink <- &proto.CSVMsg{
+				GroupID: gi.groupID,
+				Data:    row,
+			}
+		}
 	}
 	return nil
 }
@@ -153,6 +199,74 @@ func extractData(mat *matrix.Matrix) ([][]uint64, string, error) {
 	return nil, "", errors.New("heatmap data is empty")
 }
 
+// genGroupID generate group id by using the first two labels
+func genGroupID(typ string, labels []string) string{
+	if len(labels) == 0 {
+		return ""
+	}
+	if len(labels) == 1 {
+		return labels[0]
+	}
+	return fmt.Sprintf("%v:%v:%v", typ, labels[0], labels[1])
+}
+
+type groupIndex struct {
+	groupID string
+	index []int
+}
+
+type GroupIndexConstructor struct {
+	data []groupIndex
+	cursor int
+}
+
+func NewGroupIndexConstructor() *GroupIndexConstructor {
+	return &GroupIndexConstructor{
+		data:   make([]groupIndex, 0),
+		cursor: -1,
+	}
+}
+
+func (gic *GroupIndexConstructor) Append(group string, idx int) {
+	if gic.cursor == -1 {
+		gic.data = append(gic.data, groupIndex{
+			groupID: group,
+			index:   []int{idx},
+		})
+		gic.cursor = 0
+		return
+	}
+	// data is not empty
+	if group == gic.data[gic.cursor].groupID {
+		gic.data[gic.cursor].index = append(gic.data[gic.cursor].index, idx)
+		return
+	}
+	gic.data = append(gic.data, groupIndex{
+		groupID: group,
+		index:   []int{idx},
+	})
+	gic.cursor++
+}
+
+func (gic *GroupIndexConstructor) Result() []groupIndex {
+	return gic.data
+}
+
+// the return lookup is read only and has order
+func (c *HeatmapConvertor) groupIndexByTable (keys []decorator.LabelKey, data [][]uint64, tpy string) []groupIndex {
+	gic := NewGroupIndexConstructor()
+
+	for idx := range data[0] {
+		lk := keys[idx]
+		if !c.isTarget(lk.Labels){
+			continue
+		}
+		groupID := genGroupID(tpy, lk.Labels)
+		gic.Append(groupID, idx)
+	}
+	return gic.Result()
+}
+
 func (c *HeatmapConvertor) inRange(ts int64) bool {
 	if c.from == 0 && c.to == 0 {
 		return true
@@ -166,6 +280,7 @@ func (c *HeatmapConvertor) inRange(ts int64) bool {
 	return true
 }
 
+// TODO move filter function to filter struct
 func (c *HeatmapConvertor) isTarget(labels []string) bool {
 	if len(labels) <= 1 {
 		return false
@@ -188,6 +303,5 @@ func (c *HeatmapConvertor) isTarget(labels []string) bool {
 			return false
 		}
 	}
-
 	return true
 }
