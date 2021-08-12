@@ -2,45 +2,30 @@ package dispatch
 
 import (
 	"context"
+	"encoding/csv"
 	"fmt"
+	"github.com/mashenjun/mole/proto"
 	"github.com/mashenjun/mole/utils"
-	"io"
 	"os"
 	"path/filepath"
 )
-// Useless package
 
-type MetricMsg struct {
-	Name    string
-	Handler io.Reader
+type CSVFile struct {
+	*os.File // used to close file
+	csvWriter *csv.Writer
 }
 
-func NewMetricMsg(name string, handler io.Reader) *MetricMsg {
-	return &MetricMsg{
-		Name:    name,
-		Handler: handler,
-	}
-}
-
-type MetricDispatcher struct {
+type DirDispatcher struct {
 	outputDir string
-	source    <-chan *MetricMsg
-	fileFlag  int
-	merge     bool
-	metricCnt map[string]int
+	source    <-chan *proto.CSVMsg
+	lookup map[string]*CSVFile
 }
 
-func NewMetricDispatcher(dir string, source <-chan *MetricMsg, merge bool) (*MetricDispatcher, error) {
-	md := &MetricDispatcher{
+func NewDirDispatcher(dir string, source <-chan *proto.CSVMsg) (*DirDispatcher, error) {
+	md := &DirDispatcher{
 		outputDir: dir,
 		source:    source,
-		merge:     merge,
-		metricCnt: make(map[string]int),
-	}
-	if merge {
-		md.fileFlag = os.O_RDWR | os.O_CREATE | os.O_APPEND
-	} else {
-		md.fileFlag = os.O_RDWR | os.O_CREATE | os.O_TRUNC
+		lookup:  make(map[string]*CSVFile),
 	}
 	if err := utils.EnsureDir(md.outputDir); err != nil {
 		return nil, err
@@ -48,43 +33,58 @@ func NewMetricDispatcher(dir string, source <-chan *MetricMsg, merge bool) (*Met
 	return md, nil
 }
 
-func (md *MetricDispatcher) Start(ctx context.Context) error {
+func (dd *DirDispatcher) Start(ctx context.Context) error {
 	for {
 		select {
-		case msg, ok := <-md.source:
+		case msg, ok := <-dd.source:
 			if !ok {
+				dd.close()
 				return nil
 			}
-			if err := md.process(msg); err != nil {
+			if err := dd.process(msg); err != nil {
 				// log error
 				fmt.Println(err)
 			}
 		case <-ctx.Done():
+			dd.close()
 			return nil
 		}
 	}
 }
 
-func (md *MetricDispatcher) genFilename(name string) string {
-	if md.merge {
-		return name
+// get csv writer from lookup, if not existed, create a new one
+func (dd *DirDispatcher) getCSVWriter(name string) (*csv.Writer, error) {
+	w, ok := dd.lookup[name]
+	if !ok {
+		dst, err := os.Create(filepath.Join(dd.outputDir, dd.genFilename(name)))
+		if err != nil {
+			return nil, err
+		}
+		csvW := csv.NewWriter(dst)
+		dd.lookup[name] = &CSVFile{
+			File:      dst,
+			csvWriter: csvW,
+		}
+		return csvW, nil
 	}
-	md.metricCnt[name]++
-	return fmt.Sprintf("%s_%v", name, md.metricCnt[name])
+	return w.csvWriter, nil
 }
 
-func (md *MetricDispatcher) process(msg *MetricMsg) error {
-	dst, err := os.OpenFile(filepath.Join(md.outputDir, md.genFilename(msg.Name)), md.fileFlag, 0644)
+func (dd *DirDispatcher) close() {
+	for _, f := range dd.lookup {
+		f.csvWriter.Flush()
+		f.File.Close()
+	}
+}
+
+func (dd *DirDispatcher) genFilename(name string) string {
+	return fmt.Sprintf("%s.csv", name)
+}
+
+func (dd *DirDispatcher) process(msg *proto.CSVMsg) error {
+	w, err := dd.getCSVWriter(msg.GroupID)
 	if err != nil {
-		// log err and continue
-		fmt.Printf("open file error: %+v\n", err)
 		return err
 	}
-	defer dst.Close()
-	if _, err := io.Copy(dst, msg.Handler); err != nil {
-		// log err
-		fmt.Printf("write metric error: %+v\n", err)
-		return err
-	}
-	return nil
+	return w.Write(msg.Data)
 }

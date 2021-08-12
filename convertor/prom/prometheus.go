@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/cznic/mathutil"
+	"github.com/mashenjun/mole/proto"
 	"github.com/prometheus/common/model"
 	"os"
 	"sort"
@@ -14,7 +15,7 @@ import (
 )
 
 type MetricsMatrixConvertor struct {
-	sink chan []string
+	sink chan *proto.CSVMsg
 	// 左闭右闭
 	from time.Time
 	to time.Time
@@ -26,7 +27,7 @@ type MetricsMatrixConvertor struct {
 type MetricsMatrixConvertorOpt func(*MetricsMatrixConvertor) error
 
 func NewMetricsMatrixConvertor(opts...MetricsMatrixConvertorOpt) (*MetricsMatrixConvertor, error) {
-	mmc := &MetricsMatrixConvertor{sink: make(chan []string, 42)}
+	mmc := &MetricsMatrixConvertor{sink: make(chan *proto.CSVMsg, 42)}
 	for _, opt := range opts {
 		if err := opt(mmc); err != nil {
 			return nil, err
@@ -67,7 +68,7 @@ func (c *MetricsMatrixConvertor) SetFilterLabels(labels []model.LabelSet) {
 	c.filterLabels = labels
 }
 
-func (c *MetricsMatrixConvertor) GetSink() <-chan []string {
+func (c *MetricsMatrixConvertor) GetSink() <-chan *proto.CSVMsg {
 	return c.sink
 }
 
@@ -112,7 +113,9 @@ func (c *MetricsMatrixConvertor) filterAndSink(b []byte, filter model.LabelSet) 
 	}
 	// TODO: each sample series may have different time point.
 	if !c.headerSend {
-		c.sink <- extractHeader(matrix)
+		c.sink <- &proto.CSVMsg{
+			Data: extractHeader(matrix),
+		}
 		c.headerSend = true
 	}
 	align, total := checkAlign(matrix)
@@ -140,7 +143,9 @@ func (c *MetricsMatrixConvertor) filterAndSink(b []byte, filter model.LabelSet) 
 			// append data
 			row = append(row, pair.Value.String())
 		}
-		c.sink <- row
+		c.sink <- &proto.CSVMsg{
+			Data:    row,
+		}
 		idx++
 	}
 	return nil

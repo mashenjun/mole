@@ -1,7 +1,8 @@
 package convertor
 
+import "github.com/mashenjun/mole/proto"
+
 type IConvert interface {
-	// TODO: change the string to fs.File instead
 	Convert() error
-	GetSink() <-chan []string
+	GetSink() <-chan *proto.CSVMsg
 }
