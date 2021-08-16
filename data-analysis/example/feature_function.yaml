@@ -1,0 +1,40 @@
+---
+feature_functions:
+  - name: '集群存储数据总量'
+    metrics_name: 'tikv_store_size_bytes:avg_type:capacity' # metrics_name is used to locate the row in feature.csv or feature df.
+    function: expit # expit is a weighted sigmoid function
+    min: 0.5
+    max: 100
+    unit: TB
+    factor: 3
+    weight: 1
+  - name: '每TiKV平均存储数据量'
+    metrics_name: 'tikv_store_size_bytes:avg_type:capacity' # metrics_name is used to locate the row in feature.csv or feature df.
+    function: expit # expit is a weighted sigmoid function
+    min: 0.5
+    max: 10
+    unit: TB
+    factor: 1
+    weight: 1
+  - name: 'Region 总量'
+    metrics_name: 'tikv_raftstore_region_count:avg_type:region' # metrics_name is used to locate the row in feature.csv or feature df.
+    function: expit # expit is a weighted sigmoid function
+    min: 9
+    max: 9126
+    unit: KB
+    factor: 3
+    weight: 1
+  - name: 'Leader 总量'
+    metrics_name: 'tikv_raftstore_region_count:avg_type:leader' # metrics_name is used to locate the row in feature.csv or feature df.
+    function: expit # expit is a weighted sigmoid function
+    min: 3
+    max: 3072
+    unit: KB
+    factor: 3
+    weight: 1
+  - name: 'GC Life Time'
+    metrics_name: 'tidb_tikvclient_gc_config:172.17.16.11:tikv_gc_life_time'
+    function: 'static'
+    min: 0
+    max: 0
+    weight: 1
