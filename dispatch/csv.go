@@ -44,6 +44,7 @@ func (md *CSVDispatcher) Start(ctx context.Context) error {
 				cw.Flush()
 			}
 		case <-ctx.Done():
+			cw.Flush()
 			return nil
 		}
 	}
