@@ -95,14 +95,14 @@ func (c *MetricsMatrixConvertor) Convert() error {
 		scanner.Buffer(make([]byte, 4096), int(fInfo.Size()))
 	}
 	for scanner.Scan() {
-		if err := c.filterAndSink(scanner.Bytes(), nil); err != nil {
+		if err := c.filterAndSink(scanner.Bytes()); err != nil {
 			return err
 		}
 	}
 	return scanner.Err()
 }
 
-func (c *MetricsMatrixConvertor) filterAndSink(b []byte, filter model.LabelSet) error {
+func (c *MetricsMatrixConvertor) filterAndSink(b []byte) error {
 	resp := MetricsResp{}
 	if err := json.Unmarshal(b, &resp); err != nil {
 		return err
