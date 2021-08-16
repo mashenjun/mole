@@ -102,8 +102,8 @@ func reshapeCmd() *cobra.Command {
 }
 
 type FilterRule struct {
-	Record string           `json:"record" yaml:"record"` // metrics name
-	Filter []model.LabelSet `json:"filter" yaml:"filter"` // label filter
+	Record     string           `json:"record" yaml:"record"` // source metrics name
+	Filter     []model.LabelSet `json:"filter" yaml:"filter"` // label filter
 }
 
 type FilterRules struct {
