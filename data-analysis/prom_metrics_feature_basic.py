@@ -37,16 +37,16 @@ def extract_feature(df: pd.DataFrame, metrics_name: str):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="""
         prom_metrics_feature_basic.py calculate basic feature for metrics""")
-    parser.add_argument('--source_dir', dest='source_dir', help='dir contain reshaped metrics, in csv format', required=True)
+    parser.add_argument('-i', '--input', dest='input_dir', help='input dir contain reshaped metrics, in csv format', required=True)
     parser.add_argument('-o', '--output', dest='output', help='output file store basic feature result, in csv format', required=True)
 
     args = parser.parse_args()
-    source_dir = args.source_dir
+    input_dir = args.input_dir
     output_file = args.output
-    arr = os.listdir(source_dir)
+    arr = os.listdir(input_dir)
     for i, file in enumerate(arr):
         metrics = Path(file).stem
-        data = load_csv(os.path.join(source_dir, file))
+        data = load_csv(os.path.join(input_dir, file))
         print("extract {0} feature...".format(metrics))
         features = extract_feature(data, metrics)
         # write feature row by row

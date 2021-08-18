@@ -73,7 +73,7 @@ if __name__ == "__main__":
                         required=True)
     # parser.add_argument('--source', dest='source', help='csv file contain basic feature information',
     #                     required=True)
-    parser.add_argument('--source_dir', dest='source_dir', help='dir contains reshaped metrics, in csv format',
+    parser.add_argument('-i', '--input', dest='input_dir', help='input dir contains reshaped metrics, in csv format',
                         required=True)
     parser.add_argument('-o', '--output', dest='output', help='output file stores the feature score')
     args = parser.parse_args()
@@ -85,12 +85,12 @@ if __name__ == "__main__":
     # ff = load_yaml('/Users/shenjun/Workspace/play-dtw/feature_function.yaml')
     # f = load_feature('/Users/shenjun/Workspace/data-analysis/metrics-csv/features.csv')
     # visual the table
-    source_dir = args.source_dir
+    input_dir = args.input_dir
     f = pd.DataFrame(columns=prom_metrics_feature_basic.feature_cols)
-    arr = os.listdir(source_dir)
+    arr = os.listdir(input_dir)
     for i, file in enumerate(arr):
         metrics = Path(file).stem
-        data = pd.read_csv(os.path.join(source_dir, file), dtype='float')
+        data = pd.read_csv(os.path.join(input_dir, file), dtype='float')
         print("extract {0} feature...".format(metrics))
         features = prom_metrics_feature_basic.extract_feature(data, metrics)
         f = f.append(features, ignore_index=True)
