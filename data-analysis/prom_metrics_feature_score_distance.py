@@ -49,8 +49,9 @@ if __name__ == '__main__':
     base_score = pandas.read_csv(base_file)
     target_score = pandas.read_csv(target_file)
     result_df = cal_feature_score_distance(base_score, target_score)
-    print(tabulate.tabulate(result_df, headers=result_df.columns))
     if args.output is not None:
         result_df.to_csv(args.output, sep=',', index=False)
+    print_columns = ["weight", "score", "target_score", "distance", "name"]
+    print(tabulate.tabulate(result_df[print_columns], headers=print_columns, floatfmt=".3f"))
 
 

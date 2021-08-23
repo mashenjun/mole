@@ -8,6 +8,7 @@ import pandas as pd
 import prom_metrics_feature_basic
 import weighted_sigmoid
 import argparse
+import re
 
 
 def load_feature(file: str):
@@ -33,6 +34,17 @@ def cal_weighted_feature_score(f: pd.DataFrame, ff: dict):
         max_val = spec.get('max', 0)
         unit = spec.get('unit', '')
         weight = spec.get('weight', 1)
+        # check if metrics name exist, with regex match logic
+        if metrics_name not in list(f.index):
+            metrics_name = metrics_name.replace("__IP__", "(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])")
+            ok = False
+            for index_name in list(f.index):
+                if re.match(metrics_name, index_name):
+                    metrics_name = index_name
+                    ok = True
+                    break
+            if not ok:
+                raise ValueError(metrics_name + " is not found in feature df")
         # retrieve feature metrics
         if function == 'expit':
             gx_k = weighted_sigmoid.cal_k_for_gx(min_val, max_val)
@@ -71,19 +83,12 @@ if __name__ == "__main__":
             prom_metrics_feature_score.py calculate feature score for target metrics""")
     parser.add_argument('-f', '--function', dest='feature_function', help='yaml contains feature function settings',
                         required=True)
-    # parser.add_argument('--source', dest='source', help='csv file contain basic feature information',
-    #                     required=True)
     parser.add_argument('-i', '--input', dest='input_dir', help='input dir contains reshaped metrics, in csv format',
                         required=True)
     parser.add_argument('-o', '--output', dest='output', help='output file stores the feature score')
     args = parser.parse_args()
 
     ff = load_yaml(args.feature_function)
-    # f = load_feature(args.source)
-    # source_dir = args.source_dir
-    # output_file = args.output
-    # ff = load_yaml('/Users/shenjun/Workspace/play-dtw/feature_function.yaml')
-    # f = load_feature('/Users/shenjun/Workspace/data-analysis/metrics-csv/features.csv')
     # visual the table
     input_dir = args.input_dir
     f = pd.DataFrame(columns=prom_metrics_feature_basic.feature_cols)
@@ -101,7 +106,10 @@ if __name__ == "__main__":
     # weighted_sigmoid.visual_gxs(arr)
     # cal the score table
     score_table = cal_weighted_feature_score(f, ff)
-    print(tabulate.tabulate(score_table, headers=score_table.columns))
     if args.output is not None:
         score_table.to_csv(args.output, sep=',', index=False)
+    # polish the score_table to get a more viewable result
+    print_columns = ["weight", "score", "name"]
+    print(tabulate.tabulate(score_table[print_columns], headers=print_columns, floatfmt=".3f"))
+
 
