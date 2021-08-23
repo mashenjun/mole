@@ -48,7 +48,8 @@ type MetricsCollect struct {
 	outputDir    string // dir where the metrics data will be stored.
 	merge        bool
 	fileFlag     int // file flag used to open file
-	continues bool
+	continues    bool
+	subDirEnable bool // if store the collect metrics in to sub dir, default true
 }
 
 type MetricsCollectOpt func(*MetricsCollect) error
@@ -127,9 +128,17 @@ func WithContinues(continues bool) MetricsCollectOpt {
 	}
 }
 
+func WithSubDirEnable(enable bool) MetricsCollectOpt {
+	return func(collect *MetricsCollect) error {
+		collect.subDirEnable = enable
+		return nil
+	}
+}
+
 func NewMetricsCollect(opts ...MetricsCollectOpt) (*MetricsCollect, error) {
 	mc := &MetricsCollect{
 		targetRecord: make([]MetricsRecord, 0),
+		subDirEnable: true,
 	}
 	for _, opt := range opts {
 		if err := opt(mc); err != nil {
@@ -222,7 +231,7 @@ func (c *MetricsCollect) Collect(topo []Endpoint) error {
 		key := fmt.Sprintf("%s:%v", prom.Host, prom.Port)
 		done := 1
 		// ensure the file path for output is ready
-		if err := utils.EnsureDir(c.outputDir, c.genDirName(prom)); err != nil {
+		if err := utils.EnsureDir(c.genDirPath(prom)); err != nil {
 			bars[key].UpdateDisplay(&progress.DisplayProps{
 				Prefix: fmt.Sprintf("  - Query server %s: %s", key, err),
 				Mode:   progress.ModeError,
@@ -230,7 +239,7 @@ func (c *MetricsCollect) Collect(topo []Endpoint) error {
 			return err
 		}
 		// get existed metrics
-		existed, err := c.listExistedMetrics(filepath.Join(c.outputDir, c.genDirName(prom)))
+		existed, err := c.listExistedMetrics(c.genDirPath(prom))
 		if err != nil {
 			return err
 		}
@@ -331,11 +340,10 @@ func (c *MetricsCollect) collectMetric(prom Endpoint, ts []string, mtc string, e
 				// implement 2
 				// the following implementation writes response body to file directly
 				filename := c.genFileName(mtc, i)
-				topoDir := c.genDirName(prom)
-				dst, err := os.OpenFile(
-					filepath.Join(
-						c.outputDir, topoDir, filename,
-					), c.fileFlag, 0644)
+				topoDir := c.genDirPath(prom)
+				dst, err := os.OpenFile(filepath.Join(
+					topoDir, filename,
+				), c.fileFlag, 0644)
 				if err != nil {
 					fmt.Printf("collect metric %s: %s, retry...\n", mtc, err)
 				}
@@ -378,10 +386,13 @@ func (c *MetricsCollect) genFileName(mtc string, idx int) string {
 }
 
 // the dir name should also include the timestamp range.
-func (c *MetricsCollect) genDirName(ep Endpoint) string {
-	return fmt.Sprintf("%s-%v-%s-%s", ep.Host, ep.Port,
-		c.beginTime.Format("060102T150405Z0700"),
-		c.endTime.Format("060102T150405Z0700"))
+func (c *MetricsCollect) genDirPath(ep Endpoint) string {
+	if c.subDirEnable {
+		return filepath.Join(c.outputDir, fmt.Sprintf("%s-%v-%s-%s", ep.Host, ep.Port,
+			c.beginTime.Format("060102T150405Z0700"),
+			c.endTime.Format("060102T150405Z0700")))
+	}
+	return c.outputDir
 }
 
 func (c *MetricsCollect) listExistedMetrics(dir string) (map[string]struct{}, error) {
@@ -393,7 +404,7 @@ func (c *MetricsCollect) listExistedMetrics(dir string) (map[string]struct{}, er
 	if err != nil {
 		return nil, err
 	}
-	for  _, d := range ds {
+	for _, d := range ds {
 		if d.IsDir() {
 			continue
 		}

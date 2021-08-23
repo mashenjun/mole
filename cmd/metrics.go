@@ -22,8 +22,9 @@ func metricsCmd() *cobra.Command {
 		output            = ""
 		merge             = true
 		hosts             = make([]string, 0)
-		target    = ""
-		continues = false
+		target            = ""
+		continues         = false
+		subDir            = true
 	)
 
 	cmd := &cobra.Command{
@@ -47,8 +48,8 @@ func metricsCmd() *cobra.Command {
 				}
 				topo = append(topo, prom.Endpoint{
 					Schema: u.Scheme,
-					Host: u.Hostname(),
-					Port: u.Port(),
+					Host:   u.Hostname(),
+					Port:   u.Port(),
 				})
 			}
 
@@ -87,6 +88,7 @@ func metricsCmd() *cobra.Command {
 				prom.WithMerge(merge),
 				prom.WithOutputDir(output),
 				prom.WithContinues(continues),
+				prom.WithSubDirEnable(subDir),
 			)
 			if err != nil {
 				fmt.Printf("new metrics collect error: %+v\n", err)
@@ -114,7 +116,8 @@ func metricsCmd() *cobra.Command {
 	cmd.Flags().BoolVarP(&merge, "merge", "m", true, "merge content of different range for one metrics into one file")
 	cmd.Flags().StringSliceVarP(&hosts, "hosts", "H", nil, "hosts list with schema://ip:port format")
 	cmd.Flags().StringVarP(&target, "target", "T", "", "path to yaml file containing target metrics")
-	cmd.Flags().BoolVarP(&continues, "continues", "C", false, "set the collect to skip the existed metrics")
+	cmd.Flags().BoolVarP(&continues, "continues", "C", false, "set the collector to skip the existed metrics")
+	cmd.Flags().BoolVarP(&subDir, "subdir", "", true, "set the collector to store data in sub directoroes")
 	return cmd
 }
 

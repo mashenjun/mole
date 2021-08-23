@@ -32,15 +32,16 @@ func init() {
 // KeyVizCollect is the collector collecting heatmap form dashboard
 type KeyVizCollect struct {
 	//endpoint    string
-	cli       *utils.HttpClient
-	outputDir string // dir where the metrics data will be stored.
-	loginMode string
-	username  string
-	password  string
-	beginTime time.Time
-	beginTS   int64
-	endTime   time.Time
-	endTS     int64
+	cli          *utils.HttpClient
+	outputDir    string // dir where the metrics data will be stored.
+	loginMode    string
+	username     string
+	password     string
+	beginTime    time.Time
+	beginTS      int64
+	endTime      time.Time
+	endTS        int64
+	subDirEnable bool
 }
 
 type CollectOpt func(c *KeyVizCollect) error
@@ -80,8 +81,17 @@ func WithOutput(output string) CollectOpt {
 	}
 }
 
+func WithSubDirEnable(enable bool) CollectOpt {
+	return func(c *KeyVizCollect) error {
+		c.subDirEnable = enable
+		return nil
+	}
+}
+
 func NewKeyVizCollect(opts ...CollectOpt) (*KeyVizCollect, error) {
-	c := &KeyVizCollect{}
+	c := &KeyVizCollect{
+		subDirEnable: true,
+	}
 	for _, opt := range opts {
 		if err := opt(c); err != nil {
 			return nil, err
@@ -124,7 +134,7 @@ func (c *KeyVizCollect) Login(ctx context.Context, endpoint *url.URL) (string, e
 }
 
 func (c *KeyVizCollect) Collect(ctx context.Context, token string, endpoint *url.URL) error {
-	if err := utils.EnsureDir(c.outputDir, c.genDirName()); err != nil {
+	if err := utils.EnsureDir(c.genDirPath()); err != nil {
 		return err
 	}
 	// query content form api
@@ -170,8 +180,7 @@ func (c *KeyVizCollect) queryHeapMap(ctx context.Context, token string, typ stri
 		return errors.New(resp.Status)
 	}
 	dst, err := os.OpenFile(
-		filepath.Join(
-			c.outputDir, c.genDirName(), fmt.Sprintf("%s.json", typ),
+		filepath.Join(c.genDirPath(), fmt.Sprintf("%s.json", typ),
 		), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		fmt.Printf("open file error: %+v\n", err)
@@ -187,10 +196,13 @@ func (c *KeyVizCollect) queryHeapMap(ctx context.Context, token string, typ stri
 	return nil
 }
 
-func (c *KeyVizCollect) genDirName() string {
-	return fmt.Sprintf("%s-%s",
-		c.beginTime.Format("060102T150405Z0700"),
-		c.endTime.Format("060102T150405Z0700"))
+func (c *KeyVizCollect) genDirPath() string {
+	if c.subDirEnable {
+		return filepath.Join(c.outputDir, fmt.Sprintf("%s-%s",
+			c.beginTime.Format("060102T150405Z0700"),
+			c.endTime.Format("060102T150405Z0700")))
+	}
+	return c.outputDir
 }
 
 // proto struct for api request parameter and response data
