@@ -33,7 +33,7 @@ feature_functions:
     factor: 3
     weight: 1
   - name: 'GC Life Time'
-    metrics_name: 'tidb_tikvclient_gc_config:172.17.16.11:tikv_gc_life_time'
+    metrics_name: 'tidb_tikvclient_gc_config:__IP__:tikv_gc_life_time' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'static'
     min: 0
     max: 0
