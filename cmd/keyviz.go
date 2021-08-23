@@ -24,6 +24,7 @@ func keyvizCmd() *cobra.Command {
 		session = ""
 		host   = ""
 		output = ""
+		subDir = true
 	)
 	cmd := &cobra.Command{
 		Use:   `keyviz`,
@@ -57,6 +58,7 @@ func keyvizCmd() *cobra.Command {
 				keyviz.WithHttpClient(cli),
 				keyviz.WithTimeRange(begin, end),
 				keyviz.WithOutput(output),
+				keyviz.WithSubDirEnable(subDir),
 			)
 			if err != nil {
 				fmt.Printf("new keyviz error: %+v\n", err)
@@ -100,6 +102,6 @@ func keyvizCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&begin, "from", "f", time.Now().Add(time.Hour*-2).Format(time.RFC3339), "start time point when collecting timeseries data")
 	cmd.Flags().StringVarP(&end, "to", "t", time.Now().Format(time.RFC3339), "stop time point when collecting timeseries data")
 	cmd.Flags().StringVar(&session, "session", "", "file containing session code")
-
+	cmd.Flags().BoolVarP(&subDir,"subdir","", true,"set the collector to store data in sub directories")
 	return cmd
 }

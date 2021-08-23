@@ -1,0 +1,24 @@
+---
+raw:
+  - tidb_tikvclient_gc_config
+  - tikv_engine_size_bytes
+  - tikv_store_size_bytes
+  - tikv_raftstore_region_count
+  - tikv_engine_num_files_at_level
+  - tikv_engine_pending_compaction_bytes
+  - tikv_engine_estimate_num_keys
+  - tikv_engine_num_files_at_level:kv:avg
+  - tikv_engine_num_files_at_level:raft:avg
+cooked:
+  - record: tikv_engine_size_bytes:avg_type
+    expr: 'avg(tikv_engine_size_bytes) by (type)'
+  - record: tikv_store_size_bytes:avg_type
+    expr: 'avg(tikv_store_size_bytes) by (type)'
+  - record: tikv_raftstore_region_count:avg_type
+    expr: 'avg(tikv_raftstore_region_count) by (type)'
+  - record: tikv_engine_pending_compaction_bytes:avg_db
+    expr: 'avg(tikv_engine_pending_compaction_bytes) by (db)'
+  - record: tikv_engine_estimate_num_keys:avg_cf_db
+    expr: 'avg(tikv_engine_estimate_num_keys) by (cf, db)'
+  - record: tikv_engine_size_bytes:avg_db_type
+    expr: 'avg(tikv_engine_size_bytes) by (db, type)'
