@@ -74,7 +74,7 @@ if __name__ == '__main__':
         target_df = pd.read_csv(os.path.join(target_heatmap_dir, file), header=None)
         df = cal_heatmap_distance(base_df.iloc[:, 1:], target_df.iloc[:, 1:], Path(file).stem)
         result_df = result_df.append(df, ignore_index=True)
-
+    result_df.sort_values(by=['score'], ascending=False, inplace=True, ignore_index=True)
     if args.output is not None:
         result_df.to_csv(args.output, sep=',', index=False)
 
