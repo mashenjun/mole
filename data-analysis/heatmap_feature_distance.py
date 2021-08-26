@@ -1,10 +1,9 @@
+import argparse
 import os
 from pathlib import Path
 import sys
 
 import pandas as pd
-
-
 # cal distance between table heatmap by area ratio
 import tabulate
 
@@ -54,10 +53,17 @@ def cal_distance(base: pd.Series, target: pd.Series):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 3:
-        raise ValueError(__file__+ ' <base_heatmap dir> <target heatmap dir>')
-    base_heatmap_dir = sys.argv[1]
-    target_heatmap_dir = sys.argv[2]
+    parser = argparse.ArgumentParser(description="""
+            heatmap_feature_distance.py calculate distance between heatmap of base and target""")
+    parser.add_argument('-b', '--base', dest='base', help='dir contain heatmap csv file',
+                        required=True)
+    parser.add_argument('-t', '--target', dest='target', help='dir contain heatmap csv file',
+                        required=True)
+    parser.add_argument('-o', '--output', dest='output', help='output file stores the heatmap distance')
+    args = parser.parse_args()
+
+    base_heatmap_dir = args.base
+    target_heatmap_dir = args.target
     base_files = os.listdir(base_heatmap_dir)
     target_files = os.listdir(target_heatmap_dir)
     result_df = pd.DataFrame(columns=['name', 'score'])
@@ -68,4 +74,9 @@ if __name__ == '__main__':
         target_df = pd.read_csv(os.path.join(target_heatmap_dir, file), header=None)
         df = cal_heatmap_distance(base_df.iloc[:, 1:], target_df.iloc[:, 1:], Path(file).stem)
         result_df = result_df.append(df, ignore_index=True)
+
+    if args.output is not None:
+        result_df.to_csv(args.output, sep=',', index=False)
+
     print(tabulate.tabulate(result_df, headers=result_df.columns))
+
