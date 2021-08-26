@@ -1,7 +1,7 @@
 ---
 feature_functions:
   - name: '集群存储数据总量'
-    metrics_name: 'tikv_store_size_bytes:avg_type:capacity' # metrics_name is used to locate the row in feature.csv or feature df.
+    metrics_name: 'tikv_engine_size_bytes:per_instance:agg_val' # metrics_name is used to locate the row in feature.csv or feature df.
     function: expit # expit is a weighted sigmoid function
     min: 0.5
     max: 100
@@ -9,7 +9,7 @@ feature_functions:
     factor: 3
     weight: 1
   - name: '每TiKV平均存储数据量'
-    metrics_name: 'tikv_store_size_bytes:avg_type:capacity' # metrics_name is used to locate the row in feature.csv or feature df.
+    metrics_name: 'tikv_engine_size_bytes:per_instance:agg_val' # metrics_name is used to locate the row in feature.csv or feature df.
     function: expit # expit is a weighted sigmoid function
     min: 0.5
     max: 10

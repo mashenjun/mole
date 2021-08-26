@@ -204,7 +204,8 @@ func checkAlign(matrix model.Matrix) (bool, int) {
 }
 
 
-// the header is the same order in the json file.
+// the header is the same order as the label order in the json file.
+// if the metrics does not have any label, use default value `agg_val`
 func extractHeader(matrix model.Matrix) []string {
 	labelNames := make(model.LabelNames, 0)
 	header := []string{"timestamp"}
@@ -219,11 +220,15 @@ func extractHeader(matrix model.Matrix) []string {
 			}
 			sort.Sort(labelNames)
 		}
-		lvales := make([]string, len(labelNames))
-		for i, lname := range labelNames {
-			lvales[i] = strings.Split(string(sp.Metric[lname]), ":")[0]
+		if len(labelNames) == 0 {
+			header = append(header, "agg_val")
+		}else {
+			lvales := make([]string, len(labelNames))
+			for i, lname := range labelNames {
+				lvales[i] = strings.Split(string(sp.Metric[lname]), ":")[0]
+			}
+			header = append(header, strings.Join(lvales, ":"))
 		}
-		header = append(header, strings.Join(lvales, ":"))
 	}
 	return header
 }
