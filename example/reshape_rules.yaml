@@ -8,3 +8,4 @@ rules:
   - record: tikv_engine_estimate_num_keys:avg_cf_db
   - record: tikv_engine_size_bytes:avg_db_type
   - record: tidb_tikvclient_gc_config
+  - record: tikv_engine_size_bytes:per_instance

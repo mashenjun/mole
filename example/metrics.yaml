@@ -12,6 +12,8 @@ raw:
 cooked:
   - record: tikv_engine_size_bytes:avg_type
     expr: 'avg(tikv_engine_size_bytes) by (type)'
+  - record: tikv_engine_size_bytes:per_instance
+    expr: 'avg(sum(tikv_engine_size_bytes) by (instance))'
   - record: tikv_store_size_bytes:avg_type
     expr: 'avg(tikv_store_size_bytes) by (type)'
   - record: tikv_raftstore_region_count:avg_type
