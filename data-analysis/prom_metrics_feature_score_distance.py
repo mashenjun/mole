@@ -13,7 +13,7 @@ def cal_feature_score_distance(base: pd.DataFrame, target: pd.DataFrame):
     base['target_score'] = target['score']
     base['distance'] = abs(base['score'] - base['target_score']).clip(upper=1)
     base['distance'] = base['distance'] * base['weight']
-    result = base.sort_values(by=['distance'], ascending=False)
+    result = base.sort_values(by=['distance'], ascending=False, ignore_index=True)
     return result
 
 
@@ -24,17 +24,7 @@ def cal_distance_from_basic(feature_functions_dict: dict, base_features: pd.Data
 
 
 if __name__ == '__main__':
-    # we assume all the df has the weight column, and has same order
-
-    # if len(sys.argv) != 4:
-    #     raise ValueError(__file__+" <feature_functions.yaml> <base_features.csv> <target_feature.csv>")
-
-    # feature_functions_dict = prom_metrics_feature_score.load_yaml(sys.argv[1])
-    # base_features = prom_metrics_feature_score.load_feature(sys.argv[2])
-    # target_features = prom_metrics_feature_score.load_feature(sys.argv[3])
-    # base_score = prom_metrics_feature_score.cal_weighted_feature_score(base_features, feature_functions_dict)
-    # target_score = prom_metrics_feature_score.cal_weighted_feature_score(target_features, feature_functions_dict)
-    # result_df = cal_feature_score_distance(base_score, target_score)
+    # we assume all the df has the weight column, and has the same order
     parser = argparse.ArgumentParser(description="""
             prom_metrics_feature_score_distance.py calculate distance of feature score between base and target""")
     parser.add_argument('-b', '--base', dest='base', help='csv file contains feature score',
@@ -53,5 +43,11 @@ if __name__ == '__main__':
         result_df.to_csv(args.output, sep=',', index=False)
     print_columns = ["weight", "score", "target_score", "distance", "name"]
     print(tabulate.tabulate(result_df[print_columns], headers=print_columns, floatfmt=".3f"))
+    # calculate the weighted sum of distance
+    weighted_sum = result_df["weight"] * result_df["distance"]
+    summary = pandas.DataFrame([['total distance score', weighted_sum.sum() / result_df['weight'].sum()]],
+                               columns=['summary', 'value'])
+    print(tabulate.tabulate(summary, headers=summary.columns, floatfmt=".3f", showindex=False))
+    # print("total distance score: {0:.3f}".format(weighted_sum.sum() / result_df['weight'].sum()))
 
 
