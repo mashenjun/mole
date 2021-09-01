@@ -38,3 +38,44 @@ feature_functions:
     min: 0
     max: 0
     weight: 1
+  # 实例间分布
+  - name: '数据量在 TiKV 实例间的分布'
+    metrics_name: 'tikv_engine_size_bytes:sum_instance' # metrics_name is used to locate the row in feature.csv or feature df.
+    function: balance # expit is a weighted sigmoid function
+    min: 0
+    max: 0
+    unit: score
+    factor: 1
+    weight: 1
+  - name: 'Region 数量在 TiKV 实例间的分布'
+    metrics_name: 'tikv_raftstore_region_count:filter_region' # metrics_name is used to locate the row in feature.csv or feature df.
+    function: balance # expit is a weighted sigmoid function
+    min: 0
+    max: 0
+    unit: score
+    factor: 1
+    weight: 1
+  - name: 'Leader 数量在 TiKV 实例间的分布'
+    metrics_name: 'tikv_raftstore_region_count:filter_leader' # metrics_name is used to locate the row in feature.csv or feature df.
+    function: balance # expit is a weighted sigmoid function
+    min: 0
+    max: 0
+    unit: score
+    factor: 1
+    weight: 1
+  - name: '存储容量在 TiKV 实例间的分布'
+    metrics_name: 'tikv_store_size_bytes:filter_capacity' # metrics_name is used to locate the row in feature.csv or feature df.
+    function: balance # expit is a weighted sigmoid function
+    min: 0
+    max: 0
+    unit: score
+    factor: 1
+    weight: 1
+  - name: '可用容量在 TiKV 实例间的分布'
+    metrics_name: 'tikv_store_size_bytes:filter_available' # metrics_name is used to locate the row in feature.csv or feature df.
+    function: balance # expit is a weighted sigmoid function
+    min: 0
+    max: 0
+    unit: score
+    factor: 1
+    weight: 1

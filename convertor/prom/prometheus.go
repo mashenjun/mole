@@ -114,7 +114,7 @@ func (c *MetricsMatrixConvertor) filterAndSink(b []byte) error {
 	// TODO: each sample series may have different time point.
 	if !c.headerSend {
 		c.sink <- &proto.CSVMsg{
-			Data: extractHeader(matrix),
+			Data: c.extractHeader(matrix),
 		}
 		c.headerSend = true
 	}
@@ -206,7 +206,7 @@ func checkAlign(matrix model.Matrix) (bool, int) {
 
 // the header is the same order as the label order in the json file.
 // if the metrics does not have any label, use default value `agg_val`
-func extractHeader(matrix model.Matrix) []string {
+func (c *MetricsMatrixConvertor) extractHeader(matrix model.Matrix) []string {
 	labelNames := make(model.LabelNames, 0)
 	header := []string{"timestamp"}
 	for i, sp := range matrix {
@@ -219,6 +219,9 @@ func extractHeader(matrix model.Matrix) []string {
 				labelNames = append(labelNames, lname)
 			}
 			sort.Sort(labelNames)
+		}
+		if !c.matchLabels(model.LabelSet(sp.Metric)) {
+			continue
 		}
 		if len(labelNames) == 0 {
 			header = append(header, "agg_val")

@@ -24,3 +24,5 @@ cooked:
     expr: 'avg(tikv_engine_estimate_num_keys) by (cf, db)'
   - record: tikv_engine_size_bytes:avg_db_type
     expr: 'avg(tikv_engine_size_bytes) by (db, type)'
+  - record: tikv_engine_size_bytes:sum_instance
+    expr: 'sum(tikv_engine_size_bytes) by (instance)'

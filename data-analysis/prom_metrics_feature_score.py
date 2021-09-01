@@ -46,6 +46,7 @@ def cal_weighted_feature_score(f: pd.DataFrame, ff: dict):
             if not ok:
                 raise ValueError(metrics_name + " is not found in feature df")
         # retrieve feature metrics
+        feature_score = 0
         if function == 'expit':
             gx_k = weighted_sigmoid.cal_k_for_gx(min_val, max_val)
             gx_m = (min_val - max_val) / 2
@@ -53,13 +54,16 @@ def cal_weighted_feature_score(f: pd.DataFrame, ff: dict):
             feature_value = f.loc[metrics_name]['mean'] * factor
             # consider the unit factor
             new_feature_value = convert_unit(feature_value, unit)
-            feature_score = weighted_sigmoid.gx(gx_k, gx_m, new_feature_value) * weight
-            data = pd.DataFrame([[name, feature_score, weight]], columns=score_table_cols)
-            score_table = score_table.append(data, ignore_index=True)
+            feature_score = weighted_sigmoid.gx(gx_k, gx_m, new_feature_value)
+        elif function == 'balance':
+            a = f.loc[metrics_name]['maximum_mean']
+            b = f.loc[metrics_name]['mean_mean']
+            feature_score = min((a - b) / b, 1)
         else:
             feature_score = f.loc[metrics_name]['mean']
-            data = pd.DataFrame([[name, feature_score, weight]], columns=score_table_cols)
-            score_table = score_table.append(data, ignore_index=True)
+
+        data = pd.DataFrame([[name, feature_score, weight]], columns=score_table_cols)
+        score_table = score_table.append(data, ignore_index=True)
     return score_table
 
 
@@ -89,6 +93,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     ff = load_yaml(args.feature_function)
+    balance_set = set()
+    for spec in ff['feature_functions']:
+        if spec['function'] == 'balance':
+            balance_set.add(spec['metrics_name'])
     # visual the table
     input_dir = args.input_dir
     f = pd.DataFrame(columns=prom_metrics_feature_basic.feature_cols)
@@ -97,7 +105,8 @@ if __name__ == "__main__":
         metrics = Path(file).stem
         data = pd.read_csv(os.path.join(input_dir, file), dtype='float')
         print("extract {0} feature...".format(metrics))
-        features = prom_metrics_feature_basic.extract_feature(data, metrics)
+        need_summary = metrics in balance_set
+        features = prom_metrics_feature_basic.extract_feature(data, metrics, need_summary)
         f = f.append(features, ignore_index=True)
     f.set_index('metrics', inplace=True)
     # arr = np.empty(shape=[0, 2])
@@ -109,6 +118,7 @@ if __name__ == "__main__":
     if args.output is not None:
         score_table.to_csv(args.output, sep=',', index=False)
     # polish the score_table to get a more viewable result
+    score_table.sort_values(by=['score'], ascending=True, ignore_index=True, inplace=True)
     print_columns = ["weight", "score", "name"]
     print(tabulate.tabulate(score_table[print_columns], headers=print_columns, floatfmt=".3f"))
 
