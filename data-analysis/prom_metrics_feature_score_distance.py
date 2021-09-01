@@ -49,5 +49,3 @@ if __name__ == '__main__':
                                columns=['summary', 'value'])
     print(tabulate.tabulate(summary, headers=summary.columns, floatfmt=".3f", showindex=False))
     # print("total distance score: {0:.3f}".format(weighted_sum.sum() / result_df['weight'].sum()))
-
-

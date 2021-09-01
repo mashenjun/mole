@@ -9,3 +9,20 @@ rules:
   - record: tikv_engine_size_bytes:avg_db_type
   - record: tidb_tikvclient_gc_config
   - record: tikv_engine_size_bytes:per_instance
+  - record: tikv_engine_size_bytes:sum_instance
+  - record: tikv_raftstore_region_count
+    replace_name: tikv_raftstore_region_count:filter_leader
+    filter:
+      - type: leader
+  - record: tikv_raftstore_region_count
+    replace_name: tikv_raftstore_region_count:filter_region
+    filter:
+      - type: region
+  - record: tikv_store_size_bytes
+    replace_name: tikv_store_size_bytes:filter_capacity
+    filter:
+      - type: capacity
+  - record: tikv_store_size_bytes
+    replace_name: tikv_store_size_bytes:filter_available
+    filter:
+      - type: available

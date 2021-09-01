@@ -70,7 +70,7 @@ func reshapeCmd() *cobra.Command {
 				}
 				mcc.SetFilterLabels(rule.Filter)
 				source := mcc.GetSink()
-				outputFile := filepath.Join(outputDir, fmt.Sprintf("%s.csv", rule.Record))
+				outputFile := filepath.Join(outputDir, fmt.Sprintf("%s.csv", rule.OutputName()))
 				d, err := dispatch.NewCSVDispatcher(outputFile, source)
 				if err != nil {
 					fmt.Printf("new CSVDispatcher error: %v\n", err)
@@ -102,8 +102,16 @@ func reshapeCmd() *cobra.Command {
 }
 
 type FilterRule struct {
+	ReplaceName string           `json:"replace_name" yaml:"replace_name"`
 	Record     string           `json:"record" yaml:"record"` // source metrics name
 	Filter     []model.LabelSet `json:"filter" yaml:"filter"` // label filter
+}
+
+func (rf *FilterRule) OutputName() string {
+	if len(rf.ReplaceName) == 0 {
+		return rf.Record
+	}
+	return rf.ReplaceName
 }
 
 type FilterRules struct {
