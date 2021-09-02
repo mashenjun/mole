@@ -28,12 +28,17 @@ def cal_weighted_feature_score(f: pd.DataFrame, ff: dict):
     for spec in ff['feature_functions']:
         name = spec['name']
         metrics_name = spec['metrics_name']
+        feature_name = spec.get('feature_name', 'mean')
         factor = spec.get('factor', 1)
         function = spec['function']
         min_val = spec.get('min', 0)
         max_val = spec.get('max', 0)
         unit = spec.get('unit', '')
         weight = spec.get('weight', 1)
+        need_reverse = False
+        if min_val > max_val:
+            need_reverse = True
+            min_val, max_val = max_val, min_val
         # check if metrics name exist, with regex match logic
         if metrics_name not in list(f.index):
             metrics_name = metrics_name.replace("__IP__", "(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])")
@@ -51,16 +56,18 @@ def cal_weighted_feature_score(f: pd.DataFrame, ff: dict):
             gx_k = weighted_sigmoid.cal_k_for_gx(min_val, max_val)
             gx_m = (min_val - max_val) / 2
             # consider the factor
-            feature_value = f.loc[metrics_name]['mean'] * factor
+            feature_value = f.loc[metrics_name][feature_name] * factor
             # consider the unit factor
             new_feature_value = convert_unit(feature_value, unit)
             feature_score = weighted_sigmoid.gx(gx_k, gx_m, new_feature_value)
+            if need_reverse:
+                feature_score = 1 - feature_score
         elif function == 'balance':
             a = f.loc[metrics_name]['maximum_mean']
             b = f.loc[metrics_name]['mean_mean']
             feature_score = min((a - b) / b, 1)
         else:
-            feature_score = f.loc[metrics_name]['mean']
+            feature_score = f.loc[metrics_name][feature_name]
 
         data = pd.DataFrame([[name, feature_score, weight]], columns=score_table_cols)
         score_table = score_table.append(data, ignore_index=True)
@@ -93,10 +100,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     ff = load_yaml(args.feature_function)
-    balance_set = set()
+    need_summary_set = set()
     for spec in ff['feature_functions']:
-        if spec['function'] == 'balance':
-            balance_set.add(spec['metrics_name'])
+        if spec['function'] == 'balance' or spec.get('cal_summary', False):
+            need_summary_set.add(spec['metrics_name'])
     # visual the table
     input_dir = args.input_dir
     f = pd.DataFrame(columns=prom_metrics_feature_basic.feature_cols)
@@ -105,7 +112,7 @@ if __name__ == "__main__":
         metrics = Path(file).stem
         data = pd.read_csv(os.path.join(input_dir, file), dtype='float')
         print("extract {0} feature...".format(metrics))
-        need_summary = metrics in balance_set
+        need_summary = metrics in need_summary_set
         features = prom_metrics_feature_basic.extract_feature(data, metrics, need_summary)
         f = f.append(features, ignore_index=True)
     f.set_index('metrics', inplace=True)

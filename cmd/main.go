@@ -24,7 +24,7 @@ func command() *cobra.Command {
 		SilenceUsage: true,
 	}
 	cmd.CompletionOptions.DisableDefaultCmd = true
-	cmd.SilenceErrors = true
+	cmd.SilenceErrors = false
 	cmd.AddCommand(
 		schemaCmd(),
 		metricsCmd(),
