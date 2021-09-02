@@ -22,12 +22,17 @@ type MetricsMatrixConvertor struct {
 	filterLabels []model.LabelSet
 	input string
 	headerSend bool
+	process func(b []byte) error
+
+	nfLevel map[string]int
+	nfInstances model.LabelValues
 }
 
 type MetricsMatrixConvertorOpt func(*MetricsMatrixConvertor) error
 
 func NewMetricsMatrixConvertor(opts...MetricsMatrixConvertorOpt) (*MetricsMatrixConvertor, error) {
 	mmc := &MetricsMatrixConvertor{sink: make(chan *proto.CSVMsg, 42)}
+	mmc.process = mmc.filterAndSink
 	for _, opt := range opts {
 		if err := opt(mmc); err != nil {
 			return nil, err
@@ -68,6 +73,15 @@ func (c *MetricsMatrixConvertor) SetFilterLabels(labels []model.LabelSet) {
 	c.filterLabels = labels
 }
 
+func (c *MetricsMatrixConvertor) SetAggregation(name string) {
+	switch name {
+	case "last_level_ratio":
+		c.process = c.lastLevelRatioAndSink
+	default:
+		// do nothing
+	}
+}
+
 func (c *MetricsMatrixConvertor) GetSink() <-chan *proto.CSVMsg {
 	return c.sink
 }
@@ -95,7 +109,7 @@ func (c *MetricsMatrixConvertor) Convert() error {
 		scanner.Buffer(make([]byte, 4096), int(fInfo.Size()))
 	}
 	for scanner.Scan() {
-		if err := c.filterAndSink(scanner.Bytes()); err != nil {
+		if err := c.process(scanner.Bytes()); err != nil {
 			return err
 		}
 	}
@@ -113,15 +127,15 @@ func (c *MetricsMatrixConvertor) filterAndSink(b []byte) error {
 	}
 	// TODO: each sample series may have different time point.
 	if !c.headerSend {
+		header := c.extractHeader(matrix)
 		c.sink <- &proto.CSVMsg{
-			Data: c.extractHeader(matrix),
+			Data: header,
 		}
 		c.headerSend = true
 	}
 	align, total := checkAlign(matrix)
 	if !align {
 		fmt.Println("not aligned")
-
 	}
 	idx := 0
 	for idx < total {
@@ -142,6 +156,81 @@ func (c *MetricsMatrixConvertor) filterAndSink(b []byte) error {
 			}
 			// append data
 			row = append(row, pair.Value.String())
+		}
+
+		c.sink <- &proto.CSVMsg{
+			Data:    row,
+		}
+		idx++
+	}
+	return nil
+}
+
+func (c *MetricsMatrixConvertor) lastLevelRatioAndSink(b []byte) error {
+	resp := MetricsResp{}
+	if err := json.Unmarshal(b, &resp); err != nil {
+		return err
+	}
+	matrix, ok := resp.Data.v.(model.Matrix)
+	if !ok {
+		return fmt.Errorf("type %t is not supported", resp.Data.v)
+	}
+	// TODO: each sample series may have different time point.
+	if !c.headerSend {
+		header := c.levelRatioHeader(matrix)
+		c.sink <- &proto.CSVMsg{
+			Data: header,
+		}
+		c.headerSend = true
+	}
+	align, total := checkAlign(matrix)
+	if !align {
+		fmt.Println("not aligned")
+	}
+	// csvHeader is ready
+	sumCnt := make(map[string]float64)
+	for _, v := range c.nfInstances {
+		sumCnt[string(v)] = 0
+	}
+	lastLevelCnt := make(map[string]float64)
+	for _, v := range c.nfInstances {
+		lastLevelCnt[string(v)] = 0
+	}
+
+	idx := 0
+	for idx < total {
+		// reset the sumCnt and lastLevel
+		for k := range sumCnt {
+			sumCnt[k] = 0
+		}
+		for k := range lastLevelCnt {
+			lastLevelCnt[k] = 0
+		}
+
+		row := make([]string, 0)
+
+		for _, sampleStream := range matrix {
+			// filter on timestamp
+			pair := sampleStream.Values[idx]
+			if !c.inRange(pair.Timestamp.Time()){
+				continue
+			}
+			// append timestamp first
+			if len(row) == 0 {
+				row = append(row, strconv.FormatInt(pair.Timestamp.Unix(), 10))
+			}
+			// set sumCnt and lastLevel
+			instance := string(sampleStream.Metric["instance"])
+			level, _ := strconv.Atoi(string(sampleStream.Metric["level"]))
+			sumCnt[instance] += float64(pair.Value)
+			if level == c.nfLevel[instance] {
+				lastLevelCnt[instance] = float64(pair.Value)
+			}
+		}
+		// calculate the ratio and append to raw
+		for _, instance := range c.nfInstances {
+			ratio := lastLevelCnt[string(instance)] / sumCnt[string(instance)]
+			row = append(row, strconv.FormatFloat(ratio, 'f', -1, 64))
 		}
 		c.sink <- &proto.CSVMsg{
 			Data:    row,
@@ -233,6 +322,29 @@ func (c *MetricsMatrixConvertor) extractHeader(matrix model.Matrix) []string {
 			header = append(header, strings.Join(lvales, ":"))
 		}
 	}
+	return header
+}
+
+// no filter logic here only extract `instance` in header
+func (c *MetricsMatrixConvertor) levelRatioHeader(matrix model.Matrix) ([]string) {
+	header := []string{"timestamp"}
+	tmp := make(map[model.LabelValue]struct{})
+	c.nfLevel = make(map[string]int)
+	for _, sp := range matrix {
+		instanceVal := sp.Metric["instance"]
+		level, _ := strconv.Atoi(string(sp.Metric["level"]))
+		tmp[instanceVal] = struct{}{}
+		c.nfLevel[string(instanceVal)] = mathutil.Max(c.nfLevel[string(instanceVal)], level)
+	}
+	instances := make(model.LabelValues, 0, len(tmp))
+	for k:= range tmp {
+		instances = append(instances, k)
+	}
+	sort.Sort(instances)
+	for _, v := range instances {
+		header = append(header, strings.Split(string(v), ":")[0])
+	}
+	c.nfInstances = instances
 	return header
 }
 

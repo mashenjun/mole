@@ -2,14 +2,11 @@
 rules:
   - record: tikv_store_size_bytes:avg_type    
   - record: tikv_raftstore_region_count:avg_type
-  - record: tikv_engine_num_files_at_level:kv:avg
-  - record: tikv_engine_num_files_at_level:raft:avg  
-  - record: tikv_engine_pending_compaction_bytes:avg_db
-  - record: tikv_engine_estimate_num_keys:avg_cf_db
   - record: tikv_engine_size_bytes:avg_db_type
   - record: tidb_tikvclient_gc_config
   - record: tikv_engine_size_bytes:per_instance
   - record: tikv_engine_size_bytes:sum_instance
+  - record: tikv_engine_num_files_at_level:avg_instance:default
   - record: tikv_raftstore_region_count
     replace_name: tikv_raftstore_region_count:filter_leader
     filter:
@@ -26,3 +23,32 @@ rules:
     replace_name: tikv_store_size_bytes:filter_available
     filter:
       - type: available
+  - record: tikv_engine_num_files_at_level
+    replace_name: tikv_engine_num_files_at_level:filter_lv0_kv_default
+    filter:
+      - db: kv
+        cf: default
+        level: 0 
+  - record: tikv_engine_num_files_at_level
+    replace_name: tikv_engine_num_files_at_level:filter_lv0_raft
+    filter:
+      - db: raft
+        level: 0
+  - record: tikv_engine_num_files_at_level:avg_level_instance:default_write
+    replace_name: tikv_engine_num_files_at_level:avg_level_instance:last_level_ratio
+    apply_agg: last_level_ratio
+  - record: tikv_engine_pending_compaction_bytes:sum_db_instance
+    replace_name: tikv_engine_pending_compaction_bytes:sum_db_instance:filter_raft
+    filter:
+      - db: raft
+  - record: tikv_engine_pending_compaction_bytes:sum_db_instance
+    replace_name: tikv_engine_pending_compaction_bytes:sum_db_instance:filter_kv
+    filter:
+      - db: kv
+  - record: tikv_engine_key_size:per_instance:kv_default
+  - record: tikv_engine_key_size:per_instance:kv_write
+  - record: tikv_engine_estimate_num_keys
+    replace_name: tikv_engine_estimate_num_keys:filter_lock
+    filter:
+      - cf: lock
+
