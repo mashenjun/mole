@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -395,9 +396,19 @@ func (c *MetricsCollect) genDirPath(ep Endpoint) string {
 	return c.outputDir
 }
 
+// we assume the dif already existed
 func (c *MetricsCollect) listExistedMetrics(dir string) (map[string]struct{}, error) {
 	lookup := make(map[string]struct{})
 	if !c.continues {
+		ds, err := os.ReadDir(dir)
+		if err != nil {
+			return nil, err
+		}
+		for _, d := range ds {
+			if err := os.RemoveAll(path.Join([]string{dir, d.Name()}...)); err != nil {
+				return nil, err
+			}
+		}
 		return lookup, nil
 	}
 	ds, err := os.ReadDir(dir)
