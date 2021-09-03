@@ -1,68 +1,59 @@
 ---
 feature_functions:
+# 数据总量
   - name: '集群存储数据总量'
     metrics_name: 'tikv_engine_size_bytes:per_instance:agg_val' # metrics_name is used to locate the row in feature.csv or feature df.
-    function: expit # expit is a weighted sigmoid function
+    function: 'expit' # expit is a weighted sigmoid function
     min: 0.5
     max: 100
     unit: TB
     factor: 3
-    weight: 1
+    weight: 4
   - name: '每TiKV平均存储数据量'
     metrics_name: 'tikv_engine_size_bytes:per_instance:agg_val' # metrics_name is used to locate the row in feature.csv or feature df.
-    function: expit # expit is a weighted sigmoid function
+    function: 'expit' # expit is a weighted sigmoid function
     min: 0.5
     max: 10
     unit: TB
-    factor: 1
-    weight: 1
+    weight: 2
   - name: 'Region 总量'
     metrics_name: 'tikv_raftstore_region_count:avg_type:region' # metrics_name is used to locate the row in feature.csv or feature df.
-    function: expit # expit is a weighted sigmoid function
+    function: 'expit' # expit is a weighted sigmoid function
     min: 9
     max: 9126
     unit: KB
     factor: 3
-    weight: 1
+    weight: 4
   - name: 'Leader 总量'
     metrics_name: 'tikv_raftstore_region_count:avg_type:leader' # metrics_name is used to locate the row in feature.csv or feature df.
-    function: expit # expit is a weighted sigmoid function
+    function: 'expit' # expit is a weighted sigmoid function
     min: 3
     max: 3072
     unit: KB
     factor: 3
-    weight: 1
-  - name: 'GC Life Time'
-    metrics_name: 'tidb_tikvclient_gc_config:__IP__:tikv_gc_life_time' # metrics_name is used to locate the row in feature.csv or feature df.
-    function: 'static'
-    factor: 1
-    weight: 1
-  # 实例间分布
+    weight: 2
+  # 数据在 TiKV 实例间的分布
   - name: '数据量在 TiKV 实例间的分布'
     metrics_name: 'tikv_engine_size_bytes:sum_instance' # metrics_name is used to locate the row in feature.csv or feature df.
-    function: balance # expit is a weighted sigmoid function
-    factor: 1
-    weight: 1
+    function: 'balance' # expit is a weighted sigmoid function
+    weight: 4
   - name: 'Region 数量在 TiKV 实例间的分布'
     metrics_name: 'tikv_raftstore_region_count:filter_region' # metrics_name is used to locate the row in feature.csv or feature df.
-    function: balance # expit is a weighted sigmoid function
-    factor: 1
-    weight: 1
+    function: 'balance' # expit is a weighted sigmoid function
+    weight: 4
   - name: 'Leader 数量在 TiKV 实例间的分布'
     metrics_name: 'tikv_raftstore_region_count:filter_leader' # metrics_name is used to locate the row in feature.csv or feature df.
-    function: balance # expit is a weighted sigmoid function
-    factor: 1
-    weight: 1
+    function: 'balance' # expit is a weighted sigmoid function
+    weight: 4
   - name: '存储容量在 TiKV 实例间的分布'
     metrics_name: 'tikv_store_size_bytes:filter_capacity' # metrics_name is used to locate the row in feature.csv or feature df.
-    function: balance # expit is a weighted sigmoid function
-    factor: 1
-    weight: 1
+    function: 'balance' # expit is a weighted sigmoid function
+    weight: 2
   - name: '可用容量在 TiKV 实例间的分布'
     metrics_name: 'tikv_store_size_bytes:filter_available' # metrics_name is used to locate the row in feature.csv or feature df.
-    function: balance # expit is a weighted sigmoid function
-    factor: 1
-    weight: 1
+    function: 'balance' # expit is a weighted sigmoid function
+    weight: 2
+# RocksDB 状态
   - name: '集群每 TiKV 平均每层 SST 数量：default CF'
     metrics_name: 'tikv_engine_num_files_at_level:avg_instance:default' # metrics_name is used to locate the row in feature.csv or feature df.
     feature_name: 'mean_mean'
@@ -70,8 +61,7 @@ feature_functions:
     function: 'expit' # expit is a weighted sigmoid function
     min: 10000
     max: 1000000
-    factor: 1
-    weight: 1
+    weight: 4
   - name: '集群每 TiKV 平均每层 SST 数量：default CF MAX'
     metrics_name: 'tikv_engine_num_files_at_level:avg_instance:default' # metrics_name is used to locate the row in feature.csv or feature df.
     feature_name: 'maximum_mean'
@@ -79,8 +69,7 @@ feature_functions:
     function: 'expit' # expit is a weighted sigmoid function
     min: 10000
     max: 1000000
-    factor: 1
-    weight: 1
+    weight: 4
   - name: '集群每 TiKV L0 SST 数量：default CF'
     metrics_name: 'tikv_engine_num_files_at_level:filter_lv0_kv_default' # metrics_name is used to locate the row in feature.csv or feature df.
     feature_name: 'mean_mean'
@@ -88,8 +77,7 @@ feature_functions:
     function: 'expit' # expit is a weighted sigmoid function
     min: 4
     max: 32
-    factor: 1
-    weight: 1
+    weight: 4
   - name: '集群每 TiKV L0 SST 数量：default CF MAX'
     metrics_name: 'tikv_engine_num_files_at_level:filter_lv0_kv_default' # metrics_name is used to locate the row in feature.csv or feature df.
     feature_name: 'maximum_mean'
@@ -97,8 +85,7 @@ feature_functions:
     function: 'expit' # expit is a weighted sigmoid function
     min: 4
     max: 32
-    factor: 1
-    weight: 1
+    weight: 4
   - name: '集群每 TiKV L0 SST 数量：RaftDB'
     metrics_name: 'tikv_engine_num_files_at_level:filter_lv0_raft' # metrics_name is used to locate the row in feature.csv or feature df.
     feature_name: 'mean_mean'
@@ -106,8 +93,7 @@ feature_functions:
     function: 'expit' # expit is a weighted sigmoid function
     min: 4
     max: 32
-    factor: 1
-    weight: 1
+    weight: 4
   - name: '集群每 TiKV L0 SST 数量：RaftDB MAX'
     metrics_name: 'tikv_engine_num_files_at_level:filter_lv0_raft' # metrics_name is used to locate the row in feature.csv or feature df.
     feature_name: 'maximum_mean'
@@ -115,8 +101,7 @@ feature_functions:
     function: 'expit' # expit is a weighted sigmoid function
     min: 4
     max: 32
-    factor: 1
-    weight: 1
+    weight: 4
   - name: '每 TiKV SST 数量比值: NF/SUM'
     metrics_name: 'tikv_engine_num_files_at_level:avg_level_instance:last_level_ratio' # metrics_name is used to locate the row in feature.csv or feature df.
     feature_name: 'mean_mean'
@@ -124,8 +109,7 @@ feature_functions:
     function: 'expit' # expit is a weighted sigmoid function
     min: 0.9
     max: 0.5
-    factor: 1
-    weight: 1
+    weight: 4
   - name: '每 TiKV SST 数量比值: NF/SUM MAX'
     metrics_name: 'tikv_engine_num_files_at_level:avg_level_instance:last_level_ratio' # metrics_name is used to locate the row in feature.csv or feature df.
     feature_name: 'maximum_mean'
@@ -133,8 +117,7 @@ feature_functions:
     function: 'expit' # expit is a weighted sigmoid function
     min: 0.9
     max: 0.5
-    factor: 1
-    weight: 1
+    weight: 4
   - name: '集群每 TiKV pending bytes：RaftDB'
     metrics_name: 'tikv_engine_pending_compaction_bytes:sum_db_instance:filter_raft' # metrics_name is used to locate the row in feature.csv or feature df.
     feature_name: 'mean_mean'
@@ -143,8 +126,7 @@ feature_functions:
     min: 1
     max: 32
     unit: 'GB'
-    factor: 1
-    weight: 1
+    weight: 4
   - name: '集群每 TiKV pending bytes：RaftDB MAX'
     metrics_name: 'tikv_engine_pending_compaction_bytes:sum_db_instance:filter_raft' # metrics_name is used to locate the row in feature.csv or feature df.
     feature_name: 'maximum_mean'
@@ -153,8 +135,7 @@ feature_functions:
     min: 1
     max: 32
     unit: 'GB'
-    factor: 1
-    weight: 1
+    weight: 4
   - name: '集群每 TiKV pending bytes：KVDB'
     metrics_name: 'tikv_engine_pending_compaction_bytes:sum_db_instance:filter_kv' # metrics_name is used to locate the row in feature.csv or feature df.
     feature_name: 'mean_mean'
@@ -163,8 +144,7 @@ feature_functions:
     min: 1
     max: 32
     unit: 'GB'
-    factor: 1
-    weight: 1
+    weight: 4
   - name: '集群每 TiKV pending bytes：KVDB MAX'
     metrics_name: 'tikv_engine_pending_compaction_bytes:sum_db_instance:filter_kv' # metrics_name is used to locate the row in feature.csv or feature df.
     feature_name: 'maximum_mean'
@@ -173,8 +153,7 @@ feature_functions:
     min: 1
     max: 32
     unit: 'GB'
-    factor: 1
-    weight: 1
+    weight: 4
   - name: '集群每 TiKV key 平均大小：default CF'
     metrics_name: 'tikv_engine_key_size:per_instance:kv_default'
     feature_name: 'mean_mean'
@@ -183,7 +162,7 @@ feature_functions:
     min: 256
     max: 25600
     unit: 'B'
-    weight: 1
+    weight: 2
   - name: '集群每 TiKV key 平均大小：default CF MAX'
     metrics_name: 'tikv_engine_key_size:per_instance:kv_default'
     feature_name: 'maximum_mean'
@@ -192,7 +171,7 @@ feature_functions:
     min: 256
     max: 25600
     unit: 'B'
-    weight: 1
+    weight: 2
   - name: '集群每 TiKV key 平均大小：write CF'
     metrics_name: 'tikv_engine_key_size:per_instance:kv_write'
     feature_name: 'mean_mean'
@@ -201,7 +180,7 @@ feature_functions:
     min: 256
     max: 25600
     unit: 'B'
-    weight: 1
+    weight: 2
   - name: '集群每 TiKV key 平均大小：write CF MAX'
     metrics_name: 'tikv_engine_key_size:per_instance:kv_write'
     feature_name: 'maximum_mean'
@@ -210,7 +189,7 @@ feature_functions:
     min: 256
     max: 25600
     unit: 'B'
-    weight: 1
+    weight: 2
   - name: '集群每 TiKV 平均 key 数量：lock CF'
     metrics_name: 'tikv_engine_estimate_num_keys:filter_lock'
     feature_name: 'mean_mean'
@@ -219,7 +198,7 @@ feature_functions:
     min: 10
     max: 100
     unit: 'KB'
-    weight: 1
+    weight: 4
   - name: '集群每 TiKV 平均 key 数量：lock CF MAX'
     metrics_name: 'tikv_engine_estimate_num_keys:filter_lock'
     feature_name: 'maximum_mean'
@@ -228,20 +207,26 @@ feature_functions:
     min: 10
     max: 100
     unit: 'KB'
-    weight: 1
+    weight: 4
   - name: '集群每 TiKV 平均总量：default CF'
     metrics_name: 'tikv_engine_size_bytes:avg_db_type:kv:default' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'static'
-    factor: 1
-    weight: 1
+    weight: 2
   - name: '集群每 TiKV 平均总量：write CF'
     metrics_name: 'tikv_engine_size_bytes:avg_db_type:kv:write' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'static'
-    factor: 1
-    weight: 1
+    weight: 2
   - name: '集群每 TiKV 平均总量：RaftDB'
     metrics_name: 'tikv_engine_size_bytes:avg_db_type:raft:default' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'static'
-    factor: 1
-    weight: 1
+    weight: 4
+# MVCC GC 状态
+  - name: 'GC Life Time'
+    metrics_name: 'tidb_tikvclient_gc_config:__IP__:tikv_gc_life_time' # metrics_name is used to locate the row in feature.csv or feature df.
+    function: 'static'
+    weight: 2
+  - name: 'GC Interval'
+    metrics_name: 'tidb_tikvclient_gc_config:__IP__:tikv_gc_run_interval' # metrics_name is used to locate the row in feature.csv or feature df.
+    function: 'static'
+    weight: 2
 
