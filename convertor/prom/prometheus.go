@@ -196,8 +196,6 @@ func (c *MetricsMatrixConvertor) lastLevelRatioAndSink(b []byte) error {
 	for _, v := range c.nfInstances {
 		lastLevelCnt[string(v)] = 0
 	}
-	fmt.Printf("nfLevel: %+v\n", c.nfLevel)
-
 	idx := 0
 	for idx < total {
 		// reset the sumCnt and lastLevel
@@ -223,10 +221,6 @@ func (c *MetricsMatrixConvertor) lastLevelRatioAndSink(b []byte) error {
 			// set sumCnt and lastLevel
 			instance := string(sampleStream.Metric["instance"])
 			level, _ := strconv.Atoi(string(sampleStream.Metric["level"]))
-
-			fmt.Printf("instance: %+v, level: %+v, value: %+v\n", instance, level, pair.Value)
-
-
 			sumCnt[instance] += float64(pair.Value)
 			if level == c.nfLevel[instance] {
 				lastLevelCnt[instance] = float64(pair.Value)
