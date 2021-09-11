@@ -3,6 +3,7 @@ package prom
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/mashenjun/mole/consts"
 	"github.com/mashenjun/mole/utils"
 	"github.com/pingcap/tiup/pkg/cliutil/progress"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
@@ -19,9 +20,9 @@ import (
 	"time"
 )
 
-const (
-	metricStep = 15 // use 15s step, also 15 seconds is the minimal step
-)
+//const (
+//	metricStep = 15 // use 15s step, also 15 seconds is the minimal step
+//)
 
 // CollectStat is estimated size stats of data to be collected
 type CollectStat struct {
@@ -326,7 +327,7 @@ func (c *MetricsCollect) collectMetric(prom Endpoint, ts []string, mtc string, e
 						"query": {expr},
 						"start": {start},
 						"end":   {end},
-						"step":  {strconv.Itoa(metricStep)},
+						"step":  {strconv.Itoa(consts.MetricStep)},
 					},
 				)
 				if err != nil {

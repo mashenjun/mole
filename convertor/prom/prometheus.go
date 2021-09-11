@@ -5,14 +5,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/cznic/mathutil"
+	"github.com/mashenjun/mole/consts"
 	"github.com/mashenjun/mole/proto"
 	"github.com/prometheus/common/model"
+	"math"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 )
+
+var noGap = &NoGap{}
 
 type MetricsMatrixConvertor struct {
 	sink chan *proto.CSVMsg
@@ -133,21 +137,25 @@ func (c *MetricsMatrixConvertor) filterAndSink(b []byte) error {
 		}
 		c.headerSend = true
 	}
-	align, total := checkAlign(matrix)
+	align, total, gap := checkAlign(matrix)
 	if !align {
-		fmt.Println("not aligned")
+		names, missCnt := gap.GetGapInfo()
+		for _, name := range names {
+			fmt.Printf("metrics %v has gap, miss count %+v\n", name, missCnt)
+		}
 	}
-	idx := 0
-	for idx < total {
+	for idx:= 0; idx < total; idx++ {
+		if gap.InGap(idx) {
+			continue
+		}
 		row := make([]string, 0)
 		for _, sampleStream := range matrix {
-			// filter on label set
 			if !c.matchLabels(model.LabelSet(sampleStream.Metric)) {
 				continue
 			}
-			// filter on timestamp
-			pair := sampleStream.Values[idx]
-			if !c.inRange(pair.Timestamp.Time()){
+			alignedIdx := gap.GetAlignedIdx(sampleStream.Metric.String(), idx)
+			pair := sampleStream.Values[alignedIdx]
+			if !c.inRange(pair.Timestamp.Time()) {
 				continue
 			}
 			// append timestamp first
@@ -157,12 +165,36 @@ func (c *MetricsMatrixConvertor) filterAndSink(b []byte) error {
 			// append data
 			row = append(row, pair.Value.String())
 		}
-
 		c.sink <- &proto.CSVMsg{
 			Data:    row,
 		}
-		idx++
 	}
+	//idx := 0
+	//for idx < total {
+	//	row := make([]string, 0)
+	//	for _, sampleStream := range matrix {
+	//		// filter on label set
+	//		if !c.matchLabels(model.LabelSet(sampleStream.Metric)) {
+	//			continue
+	//		}
+	//		// filter on timestamp
+	//		pair := sampleStream.Values[idx]
+	//		if !c.inRange(pair.Timestamp.Time()){
+	//			continue
+	//		}
+	//		// append timestamp first
+	//		if len(row) == 0 {
+	//			row = append(row, strconv.FormatInt(pair.Timestamp.Unix(), 10))
+	//		}
+	//		// append data
+	//		row = append(row, pair.Value.String())
+	//	}
+	//
+	//	c.sink <- &proto.CSVMsg{
+	//		Data:    row,
+	//	}
+	//	idx++
+	//}
 	return nil
 }
 
@@ -183,9 +215,12 @@ func (c *MetricsMatrixConvertor) lastLevelRatioAndSink(b []byte) error {
 		}
 		c.headerSend = true
 	}
-	align, total := checkAlign(matrix)
+	align, total, gap := checkAlign(matrix)
 	if !align {
-		fmt.Println("not aligned")
+		names, missCnt := gap.GetGapInfo()
+		for _, name := range names {
+			fmt.Printf("metrics %v has gap, miss count %+v\n", name, missCnt)
+		}
 	}
 	// csvHeader is ready
 	sumCnt := make(map[string]float64)
@@ -196,8 +231,11 @@ func (c *MetricsMatrixConvertor) lastLevelRatioAndSink(b []byte) error {
 	for _, v := range c.nfInstances {
 		lastLevelCnt[string(v)] = 0
 	}
-	idx := 0
-	for idx < total {
+
+	for idx:= 0; idx < total; idx ++ {
+		if gap.InGap(idx) {
+			continue
+		}
 		// reset the sumCnt and lastLevel
 		for k := range sumCnt {
 			sumCnt[k] = 0
@@ -207,10 +245,10 @@ func (c *MetricsMatrixConvertor) lastLevelRatioAndSink(b []byte) error {
 		}
 
 		row := make([]string, 0)
-
 		for _, sampleStream := range matrix {
 			// filter on timestamp
-			pair := sampleStream.Values[idx]
+			alignedIdx := gap.GetAlignedIdx(sampleStream.Metric.String(), idx)
+			pair := sampleStream.Values[alignedIdx]
 			if !c.inRange(pair.Timestamp.Time()){
 				continue
 			}
@@ -237,8 +275,50 @@ func (c *MetricsMatrixConvertor) lastLevelRatioAndSink(b []byte) error {
 		c.sink <- &proto.CSVMsg{
 			Data:    row,
 		}
-		idx++
 	}
+	//idx := 0
+	//for idx < total {
+	//	// reset the sumCnt and lastLevel
+	//	for k := range sumCnt {
+	//		sumCnt[k] = 0
+	//	}
+	//	for k := range lastLevelCnt {
+	//		lastLevelCnt[k] = 0
+	//	}
+	//
+	//	row := make([]string, 0)
+	//
+	//	for _, sampleStream := range matrix {
+	//		// filter on timestamp
+	//		pair := sampleStream.Values[idx]
+	//		if !c.inRange(pair.Timestamp.Time()){
+	//			continue
+	//		}
+	//		// append timestamp first
+	//		if len(row) == 0 {
+	//			row = append(row, strconv.FormatInt(pair.Timestamp.Unix(), 10))
+	//		}
+	//		// set sumCnt and lastLevel
+	//		instance := string(sampleStream.Metric["instance"])
+	//		level, _ := strconv.Atoi(string(sampleStream.Metric["level"]))
+	//		sumCnt[instance] += float64(pair.Value)
+	//		if level == c.nfLevel[instance] {
+	//			lastLevelCnt[instance] = float64(pair.Value)
+	//		}
+	//	}
+	//	// calculate the ratio and append to raw
+	//	for _, instance := range c.nfInstances {
+	//		var ratio float64
+	//		if sumCnt[string(instance)] > 0 {
+	//			ratio = lastLevelCnt[string(instance)] / sumCnt[string(instance)]
+	//		}
+	//		row = append(row, strconv.FormatFloat(ratio, 'f', -1, 64))
+	//	}
+	//	c.sink <- &proto.CSVMsg{
+	//		Data:    row,
+	//	}
+	//	idx++
+	//}
 	return nil
 }
 
@@ -277,21 +357,49 @@ func match(query model.LabelSet, target model.LabelSet) bool {
 	return true
 }
 
-func checkAlign(matrix model.Matrix) (bool, int) {
+// a very native impl
+func checkAlign(matrix model.Matrix) (bool, int, IGap) {
 	if len(matrix) == 0 {
-		return true, 0
+		return true, 0, noGap
 	}
 	if len(matrix) == 1 {
-		return true, len(matrix[0].Values)
+		return true, len(matrix[0].Values), noGap
 	}
-	align, size:= true, len(matrix[0].Values)
+	// need to calculate the gap
+	// use a builder to create the gap
+	var startTs int64 = math.MaxInt64
+	align, longest := true, len(matrix[0].Values)
+	gapStreamCnt := 0
 	for _, sp := range matrix {
-		if align && len(sp.Values) != size {
+		if len(sp.Values) != longest {
 			align = false
+			gapStreamCnt ++
 		}
-		size = mathutil.Min(size, len(sp.Values))
+		startTs = mathutil.MinInt64(startTs, sp.Values[0].Timestamp.Unix())
+		longest= mathutil.Max(longest, len(sp.Values))
 	}
-	return align, size
+	if align {
+		return true, longest, noGap
+	}
+
+	builder := NewMergedGapBuilder(gapStreamCnt, startTs, consts.MetricStep, longest)
+	for _, sp := range matrix {
+		if len(sp.Values) < longest {
+			builder.Push(sp.Metric.String(), sp.Values)
+		}
+	}
+	mg := builder.Build()
+	return false, longest, mg
+
+	//align, size:= true, len(matrix[0].Values)
+	//for _, sp := range matrix {
+	//	if align && len(sp.Values) != size {
+	//		log.Printf("check aligin name: %+v, length: %+v, first: %+v, size: %+v\n", sp.Metric.String(), len(sp.Values), matrix[0].Metric.String(), size)
+	//		align = false
+	//	}
+	//	size = mathutil.Min(size, len(sp.Values))
+	//}
+	//return align, size
 }
 
 
@@ -319,7 +427,7 @@ func (c *MetricsMatrixConvertor) extractHeader(matrix model.Matrix) []string {
 		}else {
 			lvales := make([]string, len(labelNames))
 			for i, lname := range labelNames {
-				lvales[i] = strings.Split(string(sp.Metric[lname]), ":")[0]
+				lvales[i] = string(sp.Metric[lname])
 			}
 			header = append(header, strings.Join(lvales, ":"))
 		}
@@ -327,8 +435,8 @@ func (c *MetricsMatrixConvertor) extractHeader(matrix model.Matrix) []string {
 	return header
 }
 
-// no filter logic here only extract `instance` in header
-func (c *MetricsMatrixConvertor) levelRatioHeader(matrix model.Matrix) ([]string) {
+// no filter logic here only extract `instance` in header and set `nfInstance
+func (c *MetricsMatrixConvertor) levelRatioHeader(matrix model.Matrix) []string {
 	header := []string{"timestamp"}
 	tmp := make(map[model.LabelValue]struct{})
 	c.nfLevel = make(map[string]int)
@@ -342,9 +450,10 @@ func (c *MetricsMatrixConvertor) levelRatioHeader(matrix model.Matrix) ([]string
 	for k:= range tmp {
 		instances = append(instances, k)
 	}
+	// map to slice, need sort
 	sort.Sort(instances)
 	for _, v := range instances {
-		header = append(header, strings.Split(string(v), ":")[0])
+		header = append(header, string(v))
 	}
 	c.nfInstances = instances
 	return header
