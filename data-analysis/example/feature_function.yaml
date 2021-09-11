@@ -211,22 +211,29 @@ feature_functions:
   - name: '集群每 TiKV 平均总量：default CF'
     metrics_name: 'tikv_engine_size_bytes:avg_db_type:kv:default' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'static'
+    distance_function: 'nrm_delta'
     weight: 2
   - name: '集群每 TiKV 平均总量：write CF'
     metrics_name: 'tikv_engine_size_bytes:avg_db_type:kv:write' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'static'
+    distance_function: 'nrm_delta'
     weight: 2
   - name: '集群每 TiKV 平均总量：RaftDB'
     metrics_name: 'tikv_engine_size_bytes:avg_db_type:raft:default' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'static'
+    distance_function: 'nrm_delta'
     weight: 4
 # MVCC GC 状态
   - name: 'GC Life Time'
-    metrics_name: 'tidb_tikvclient_gc_config:__IP__:tikv_gc_life_time' # metrics_name is used to locate the row in feature.csv or feature df.
+    metrics_name: 'tidb_tikvclient_gc_config:filter_tikv_gc_life_time' # metrics_name is used to locate the row in feature.csv or feature df.
+    feature_name: 'maximum'
+    cal_summary: true
     function: 'static'
     weight: 2
   - name: 'GC Interval'
-    metrics_name: 'tidb_tikvclient_gc_config:__IP__:tikv_gc_run_interval' # metrics_name is used to locate the row in feature.csv or feature df.
+    metrics_name: 'tidb_tikvclient_gc_config:filter_tikv_gc_run_interval' # metrics_name is used to locate the row in feature.csv or feature df.
+    feature_name: 'maximum'
+    cal_summary: true
     function: 'static'
     weight: 2
 

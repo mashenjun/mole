@@ -35,7 +35,7 @@ def extract_feature(df: pd.DataFrame, metrics_name: str, need_summary: bool):
         table = table.append(extracted_features, ignore_index=True)
     # extracted_features = extract_features(df, column_id='metrics', column_sort="timestamp")
     balance_summary = pd.Series([metrics_name, 0, 0, 0,
-                0, 0, 0, 0, 0, table['mean'].mean(), table['mean'].max()], index=feature_cols)
+                0, 0, 0, table['maximum'].max(), table['minimum'].min(), table['mean'].mean(), table['mean'].max()], index=feature_cols)
     table = table.append(balance_summary, ignore_index=True)
     return table
 

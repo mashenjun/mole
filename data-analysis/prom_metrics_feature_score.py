@@ -23,7 +23,8 @@ def load_yaml(file: str):
 
 # return a df containing feature scores.
 def cal_weighted_feature_score(f: pd.DataFrame, ff: dict):
-    score_table_cols = ['name', 'score', 'weight']
+    # distance_function control how to cal distance
+    score_table_cols = ['name', 'score', 'weight', 'distance_function']
     score_table = pd.DataFrame(columns=score_table_cols)
     for spec in ff['feature_functions']:
         name = spec['name']
@@ -35,13 +36,14 @@ def cal_weighted_feature_score(f: pd.DataFrame, ff: dict):
         max_val = spec.get('max', 0)
         unit = spec.get('unit', '')
         weight = spec.get('weight', 1)
+        distance_function = spec.get('distance_function', 'delta')
         need_reverse = False
         if min_val > max_val:
             need_reverse = True
             min_val, max_val = max_val, min_val
         # check if metrics name exist, with regex match logic
         if metrics_name not in list(f.index):
-            metrics_name = metrics_name.replace("__IP__", "(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])")
+            metrics_name = metrics_name.replace("__IP__", "(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]):\d+")
             ok = False
             for index_name in list(f.index):
                 if re.match(metrics_name, index_name):
@@ -69,7 +71,7 @@ def cal_weighted_feature_score(f: pd.DataFrame, ff: dict):
         else:
             feature_score = f.loc[metrics_name][feature_name]
 
-        data = pd.DataFrame([[name, feature_score, weight]], columns=score_table_cols)
+        data = pd.DataFrame([[name, feature_score, weight, distance_function]], columns=score_table_cols)
         score_table = score_table.append(data, ignore_index=True)
     return score_table
 
