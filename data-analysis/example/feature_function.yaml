@@ -7,7 +7,7 @@ feature_functions:
     min: 0.5
     max: 100
     unit: TB
-    factor: 8
+    factor: &tikvcnt 8
     weight: 4
   - name: '每 TiKV 平均存储数据量'
     metrics_name: 'tikv_engine_size_bytes:per_instance:agg_val' # metrics_name is used to locate the row in feature.csv or feature df.
@@ -21,14 +21,14 @@ feature_functions:
     function: 'expit' # expit is a weighted sigmoid function
     min: 9000
     max: 9000000
-    factor: 8
+    factor: *tikvcnt
     weight: 4
   - name: 'Leader 总量'
     metrics_name: 'tikv_raftstore_region_count:avg_type:leader' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'expit' # expit is a weighted sigmoid function
     min: 3000
     max: 3000000
-    factor: 8
+    factor: *tikvcnt
     weight: 2
   # 数据在 TiKV 实例间的分布
   - name: '数据量在 TiKV 实例间的分布'
