@@ -1,15 +1,14 @@
 ---
 raw:
+  # for static data distribution
   - tidb_tikvclient_gc_config
   - tikv_engine_size_bytes
   - tikv_store_size_bytes
   - tikv_raftstore_region_count
   - tikv_engine_num_files_at_level
-  # - tikv_engine_pending_compaction_bytes # not used
   - tikv_engine_estimate_num_keys
-  # - tikv_engine_num_files_at_level:kv:avg # not used
-  # - tikv_engine_num_files_at_level:raft:avg # not used
 cooked:
+  # for statics data distribution
   - record: tikv_engine_size_bytes:avg_type
     expr: 'avg(tikv_engine_size_bytes)by(type)'
   - record: tikv_engine_size_bytes:per_instance
@@ -32,3 +31,36 @@ cooked:
     expr: 'sum(tikv_engine_size_bytes{db="kv",type="default"})by(instance)/sum(tikv_engine_estimate_num_keys{cf="default",db="kv"})by(instance)'
   - record: tikv_engine_key_size:per_instance:kv_write
     expr: 'sum(tikv_engine_size_bytes{db="kv",type="write"})by(instance)/sum(tikv_engine_estimate_num_keys{cf="write",db="kv"})by(instance)'
+  # for dynamic performance distribution
+  - record: tidb_qps:by_instance
+    expr: 'sum(rate(tidb_executor_statement_total[1m]))by(instance)'
+  - record: tidb_avg_rt:by_instance 
+    expr: 'sum(rate(tidb_server_handle_query_duration_seconds_sum[1m]))by(instance)/sum(rate(tidb_server_handle_query_duration_seconds_count[1m]))by(instance)'
+  - record: tidb_p99_rt:by_instance
+    expr: 'histogram_quantile(0.99, sum(rate(tidb_server_handle_query_duration_seconds_bucket[1m]))by(le,instance))'
+  - record: tikv_qps:write:by_instance
+    expr: 'sum(rate(tikv_grpc_msg_duration_seconds_count{type=~"kv_perwrite|kv_commit|kv_pessimistic_lock"}[1m]))by(instance)'
+  - record: tikv_avg_rt:write:by_instance
+    expr: 'sum(rate(tikv_grpc_msg_duration_seconds_sum{type=~"kv_perwrite|kv_commit|kv_pessimistic_lock"}[1m]))by(instance)/sum(rate(tikv_grpc_msg_duration_seconds_count{type=~"kv_perwrite|kv_commit"}[1m]))by(instance)'
+  - record: tikv_p99_rt:write:by_instance 
+    expr: 'histogram_quantile(0.99,sum(rate(tikv_grpc_msg_duration_seconds_bucket{type=~"kv_perwrite|kv_commit|kv_pessimistic_lock"}[1m]))by(le, instance))'
+  - record: tikv_qps:get:by_instance
+    expr: 'sum(rate(tikv_grpc_msg_duration_seconds_count{type=~"kv_get|kv_batch_get"}[1m]))by(instance)'
+  - record: tikv_avg_rt:by_instance
+    expr: 'sum(rate(tikv_grpc_msg_duration_seconds_sum{type=~"kv_get|kv_batch_get"}[1m]))by(instance)/sum(rate(tikv_grpc_msg_duration_seconds_count{type=~"kv_get|kv_batch_get"}[1m]))by(instance)'
+  - record: tikv_p99_rt:by_instance
+    expr: 'histogram_quantile(0.99,sum(rate(tikv_grpc_msg_duration_seconds_bucket{type=~"kv_get|kv_batch_get"}[1m]))by(le,instance))'
+  - record: tikv_qps:copr:by_instance
+    expr: 'sum(rate(tikv_grpc_msg_duration_seconds_count{type=~"coprocessor"}[1m]))by(instance)'
+  - record: tikv_avg_rt:copr:by_instance
+    expr: 'sum(rate(tikv_grpc_msg_duration_seconds_sum{type=~"coprocessor"}[1m]))by(instance)/sum(rate(tikv_grpc_msg_duration_seconds_count{type=~"coprocessor"}[1m]))by(instance)'
+  - record: tikv_p99_rt:copr:by_instance
+    expr: 'histogram_quantile(0.99,sum(rate(tikv_grpc_msg_duration_seconds_bucket{type=~"coprocessor"}[1m]))by(le,instance))'
+  - record: tidb_cpu_usage:by_instance
+    expr: 'irate(process_cpu_seconds_total{job="tidb"}[30s])/tidb_server_maxprocs{job="tidb"}'
+  - record: tikv_cpu_usage:by_instance
+    expr: 'sum(rate(tikv_thread_cpu_seconds_total[1m]))by(instance)'
+  - record: tikv_copr_scan_ops:by_req
+    expr: 'sum(rate(tikv_coprocessor_scan_details{req=~"index|select"}[1m]))by(req)'
+  - record: tikv_copr_rocksdb_perf_ops:by_metric
+    expr: 'sum(rate(tikv_coprocessor_rocksdb_perf{metric="internal_delete_skipped_count"}[1m]))by(metric)'
