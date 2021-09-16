@@ -62,6 +62,7 @@ def cal_weighted_feature_score(f: pd.DataFrame, ff: dict):
             # consider the unit factor
             new_feature_value = convert_unit(feature_value, unit)
             feature_score = weighted_sigmoid.gx(gx_k, gx_m, new_feature_value)
+            # print(feature_name, feature_value, feature_score)
             if need_reverse:
                 feature_score = 1 - feature_score
         elif function == 'balance':
