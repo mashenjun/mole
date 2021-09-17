@@ -169,32 +169,6 @@ func (c *MetricsMatrixConvertor) filterAndSink(b []byte) error {
 			Data:    row,
 		}
 	}
-	//idx := 0
-	//for idx < total {
-	//	row := make([]string, 0)
-	//	for _, sampleStream := range matrix {
-	//		// filter on label set
-	//		if !c.matchLabels(model.LabelSet(sampleStream.Metric)) {
-	//			continue
-	//		}
-	//		// filter on timestamp
-	//		pair := sampleStream.Values[idx]
-	//		if !c.inRange(pair.Timestamp.Time()){
-	//			continue
-	//		}
-	//		// append timestamp first
-	//		if len(row) == 0 {
-	//			row = append(row, strconv.FormatInt(pair.Timestamp.Unix(), 10))
-	//		}
-	//		// append data
-	//		row = append(row, pair.Value.String())
-	//	}
-	//
-	//	c.sink <- &proto.CSVMsg{
-	//		Data:    row,
-	//	}
-	//	idx++
-	//}
 	return nil
 }
 
@@ -276,49 +250,6 @@ func (c *MetricsMatrixConvertor) lastLevelRatioAndSink(b []byte) error {
 			Data:    row,
 		}
 	}
-	//idx := 0
-	//for idx < total {
-	//	// reset the sumCnt and lastLevel
-	//	for k := range sumCnt {
-	//		sumCnt[k] = 0
-	//	}
-	//	for k := range lastLevelCnt {
-	//		lastLevelCnt[k] = 0
-	//	}
-	//
-	//	row := make([]string, 0)
-	//
-	//	for _, sampleStream := range matrix {
-	//		// filter on timestamp
-	//		pair := sampleStream.Values[idx]
-	//		if !c.inRange(pair.Timestamp.Time()){
-	//			continue
-	//		}
-	//		// append timestamp first
-	//		if len(row) == 0 {
-	//			row = append(row, strconv.FormatInt(pair.Timestamp.Unix(), 10))
-	//		}
-	//		// set sumCnt and lastLevel
-	//		instance := string(sampleStream.Metric["instance"])
-	//		level, _ := strconv.Atoi(string(sampleStream.Metric["level"]))
-	//		sumCnt[instance] += float64(pair.Value)
-	//		if level == c.nfLevel[instance] {
-	//			lastLevelCnt[instance] = float64(pair.Value)
-	//		}
-	//	}
-	//	// calculate the ratio and append to raw
-	//	for _, instance := range c.nfInstances {
-	//		var ratio float64
-	//		if sumCnt[string(instance)] > 0 {
-	//			ratio = lastLevelCnt[string(instance)] / sumCnt[string(instance)]
-	//		}
-	//		row = append(row, strconv.FormatFloat(ratio, 'f', -1, 64))
-	//	}
-	//	c.sink <- &proto.CSVMsg{
-	//		Data:    row,
-	//	}
-	//	idx++
-	//}
 	return nil
 }
 
@@ -357,7 +288,7 @@ func match(query model.LabelSet, target model.LabelSet) bool {
 	return true
 }
 
-// a very native impl
+// checkAlign check if all metrics has the same length and find if there is any gap.
 func checkAlign(matrix model.Matrix) (bool, int, IGap) {
 	if len(matrix) == 0 {
 		return true, 0, noGap
@@ -390,16 +321,6 @@ func checkAlign(matrix model.Matrix) (bool, int, IGap) {
 	}
 	mg := builder.Build()
 	return false, longest, mg
-
-	//align, size:= true, len(matrix[0].Values)
-	//for _, sp := range matrix {
-	//	if align && len(sp.Values) != size {
-	//		log.Printf("check aligin name: %+v, length: %+v, first: %+v, size: %+v\n", sp.Metric.String(), len(sp.Values), matrix[0].Metric.String(), size)
-	//		align = false
-	//	}
-	//	size = mathutil.Min(size, len(sp.Values))
-	//}
-	//return align, size
 }
 
 

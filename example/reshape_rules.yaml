@@ -76,4 +76,6 @@ rules:
   - record: tikv_cpu_usage:by_instance
   - record: tikv_copr_scan_ops:by_req
   - record: tikv_copr_rocksdb_perf_ops:by_metric
+  - record: tikv_failed_qps
+  - record: tikv_io_bytes:by_instance
 

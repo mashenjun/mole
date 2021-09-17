@@ -114,6 +114,7 @@ if __name__ == "__main__":
     for i, file in enumerate(arr):
         metrics = Path(file).stem
         data = pd.read_csv(os.path.join(input_dir, file), dtype='float')
+        data.fillna(0, inplace=True)
         print("extract {0} feature...".format(metrics))
         need_summary = metrics in need_summary_set
         features = prom_metrics_feature_basic.extract_feature(data, metrics, need_summary)
