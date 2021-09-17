@@ -293,6 +293,10 @@ feature_functions:
     metrics_name: 'tikv_cpu_usage:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'balance' # balance is abs(max-mean)/mean
     weight: 4
+  - name: '磁盘流量在 TiKV 间的分布'
+    metrics_name: 'tikv_io_bytes:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
+    function: 'balance' # balance is abs(max-mean)/mean
+    weight: 4
 # 集群 TiKV 总体表现 TODO
   - name: 'TiKV 集群 Index Scan 总体 OPS'
     metrics_name: 'tikv_copr_scan_ops:by_req:index' # metrics_name is used to locate the row in feature.csv or feature df.
@@ -305,6 +309,11 @@ feature_functions:
     feature_name: 'mean'
     function: 'static'
     distance_function: 'nrm_delta'
+    weight: 4
+  - name: 'TiKV 集群失败总体 QPS'
+    metrics_name: tikv_failed_qps
+    feature_name: 'mean'
+    function: 'static'
     weight: 4
   - name: 'TiKV 集群 copr 扫到无效数据的 OPS'
     metrics_name: 'tikv_copr_rocksdb_perf_ops:by_metric:internal_delete_skipped_count' # metrics_name is used to locate the row in feature.csv or feature df.

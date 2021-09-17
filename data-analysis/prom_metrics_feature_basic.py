@@ -7,7 +7,14 @@ from tsfresh.feature_extraction import extract_features, MinimalFCParameters
 # cnt is the positive value count
 feature_cols = ['metrics', 'sum', 'median', 'mean',
                 'length', 'standard_deviation',
-                'variance', 'maximum', 'minimum', 'mean_mean', 'maximum_mean', 'sum_div_cnt', 'mean_sum_div_cnt', 'maximum_sum_div_cnt']
+                'variance', 'maximum', 'minimum', 'mean_mean', 'maximum_mean', 'sum_div_cnt', 'mean_sum_div_cnt',
+                'maximum_sum_div_cnt']
+
+
+def gen_empty_series(name: str):
+    zeros = [0] * (len(feature_cols)-1)
+    empty_metrics = [name] + zeros
+    return pd.Series(empty_metrics, index=feature_cols)
 
 
 def load_csv(file_name: str):
@@ -18,7 +25,10 @@ def load_csv(file_name: str):
 def extract_feature(df: pd.DataFrame, metrics_name: str, need_summary: bool):
     table = pd.DataFrame(columns=feature_cols)
     cols = df.columns[1:]
-    # print(cols)
+    # if the metrics is empty, fill with all zero
+    if len(cols) == 0:
+        return table.append(gen_empty_series(metrics_name), ignore_index= True)
+    # fill fake data for the metrics column
     df['metrics'] = 1
     for col in cols:
         ddf = df[['metrics', 'timestamp', col]]
@@ -35,22 +45,21 @@ def extract_feature(df: pd.DataFrame, metrics_name: str, need_summary: bool):
         extracted_features.insert(loc=12, column='mean_sum_div_cnt', value=0)
         extracted_features.insert(loc=13, column='maximum_sum_div_cnt', value=0)
         new_cols = {x: y for x, y in zip(extracted_features.columns, table.columns)}
-        # print(new_cols)
         extracted_features.rename(columns=new_cols, inplace=True)
         table = table.append(extracted_features, ignore_index=True)
     # extracted_features = extract_features(df, column_id='metrics', column_sort="timestamp")
-    # calculate some summary feature
-    balance_summary = pd.Series([metrics_name, 0, 0, 0,
-        0, 0, 0,
-        table['maximum'].max(),
-        table['minimum'].min(),
-        table['mean'].mean(),
-        table['mean'].max(),
-        0,
-        table['sum_div_cnt'].mean(),
-        table['sum_div_cnt'].max()],
-        index= feature_cols)
-    table = table.append(balance_summary, ignore_index=True)
+    # calculate some summary feature and append it to result table if necessary
+    if need_summary:
+        balance_summary = pd.Series([metrics_name, 0, 0, 0, 0, 0, 0,
+                                     table['maximum'].max(),
+                                     table['minimum'].min(),
+                                     table['mean'].mean(),
+                                     table['mean'].max(),
+                                     0,
+                                     table['sum_div_cnt'].mean(),
+                                     table['sum_div_cnt'].max()],
+                                    index=feature_cols)
+        table = table.append(balance_summary, ignore_index=True)
     return table
 
 
@@ -70,6 +79,7 @@ if __name__ == "__main__":
         metrics = Path(file).stem
         data = load_csv(os.path.join(input_dir, file))
         print("extract {0} feature...".format(metrics))
+        data.fillna(0, inplace=True)
         features = extract_feature(data, metrics, True)
         # write feature row by row
         if i == 0:
