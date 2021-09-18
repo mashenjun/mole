@@ -68,7 +68,9 @@ def cal_weighted_feature_score(f: pd.DataFrame, ff: dict):
         elif function == 'balance':
             a = f.loc[metrics_name]['maximum_mean']
             b = f.loc[metrics_name]['mean_mean']
-            feature_score = min((a - b) / b, 1)
+            # if mean_mean is zero, all instance has zero value on this metrics
+            # thus set feature_score to zero directly
+            feature_score = 0 if b == 0 else min((a - b) / b, 1)
         else:
             feature_score = f.loc[metrics_name][feature_name]
 
