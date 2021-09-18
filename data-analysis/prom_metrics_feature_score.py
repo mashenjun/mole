@@ -10,6 +10,7 @@ import weighted_sigmoid
 import argparse
 import re
 
+score_table_cols = ['name', 'score', 'weight', 'distance_function']
 
 def load_feature(file: str):
     data = pd.read_csv(file)
@@ -24,7 +25,6 @@ def load_yaml(file: str):
 # return a df containing feature scores.
 def cal_weighted_feature_score(f: pd.DataFrame, ff: dict):
     # distance_function control how to cal distance
-    score_table_cols = ['name', 'score', 'weight', 'distance_function']
     score_table = pd.DataFrame(columns=score_table_cols)
     for spec in ff['feature_functions']:
         name = spec['name']
@@ -92,6 +92,10 @@ def convert_unit(val: float, unit: str):
         return val
 
 
+def cal_key(s: pd.Series):
+    return s.apply(lambda x: x if x > 1 else 1-x)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="""
             prom_metrics_feature_score.py calculate feature score for target metrics""")
@@ -129,7 +133,8 @@ if __name__ == "__main__":
     if args.output is not None:
         score_table.to_csv(args.output, sep=',', index=False)
     # polish the score_table to get a more viewable result
-    score_table.sort_values(by=['score'], ascending=True, ignore_index=True, inplace=True)
+    score_table.sort_values(by='score', ascending=True, ignore_index=True, inplace=True, key=cal_key)
+
     print_columns = ["weight", "score", "name"]
     print(tabulate.tabulate(score_table[print_columns], headers=print_columns, floatfmt=".3f"))
 
