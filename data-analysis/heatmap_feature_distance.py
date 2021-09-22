@@ -30,7 +30,7 @@ def align(base: pd.Series, target: pd.Series):
 
 
 def scale_out(s: pd.Series, factor: int):
-    out = pd.Series([])
+    out = pd.Series(dtype='float64')
     for i in range(0, s.size):
         for j in range(0, factor):
             out.append([s[i]], ignore_index=True)
