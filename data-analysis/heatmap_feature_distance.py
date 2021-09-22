@@ -10,12 +10,19 @@ import tabulate
 
 def cal_heatmap_distance(base: pd.DataFrame, target: pd.DataFrame, name:str):
     # normalize
-    base = (base - base.min()) / (base.max() - base.min())
-    target = (target - target.min()) / (target.max() - target.min())
-
+    if len(base.index) > 1:
+        base_denominator = base.max(axis=0) - base.min(axis=0)
+        base_denominator = base_denominator.apply(lambda x: 1 if x == 0 else x)
+        base = (base - base.min()) / base_denominator
+    if len(target.index) > 1:
+        target_denominator = target.max(axis=0) - target.min(axis=0)
+        target_denominator = target_denominator.apply(lambda x: 1 if x == 0 else x)
+        target = (target - target.min()) / target_denominator
     base_sum: pd.Series = base.sum(axis=0)
     target_sum: pd.Series = target.sum(axis=0)
     # scale the base_sum and target_sum if they have different column counts
+    base_sum.reset_index(inplace=True, drop=True)
+    target_sum.reset_index(inplace=True, drop=True)
     base_sum, target_sum = align(base_sum, target_sum)
     score = cal_distance(base_sum, target_sum)
     return pd.DataFrame([[name, score]], columns=['name', 'score'])
@@ -30,10 +37,12 @@ def align(base: pd.Series, target: pd.Series):
 
 
 def scale_out(s: pd.Series, factor: int):
-    out = pd.Series(dtype='float64')
+    out = pd.Series([], dtype='float64')
     for i in range(0, s.size):
+        elements = []
         for j in range(0, factor):
-            out.append([s[i]], ignore_index=True)
+            elements.append(s[i])
+        out = out.append(pd.Series(elements), ignore_index=True)
     return out
 
 
