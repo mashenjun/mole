@@ -7,7 +7,7 @@ feature_functions:
     min: 0.5
     max: 100
     unit: TB
-    factor: &tikvcnt 8
+    factor: &tikvcnt -1
     weight: 4
   - name: '每 TiKV 平均存储数据量'
     metrics_name: 'tikv_engine_size_bytes:per_instance:agg_val' # metrics_name is used to locate the row in feature.csv or feature df.
