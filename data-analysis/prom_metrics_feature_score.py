@@ -107,17 +107,23 @@ if __name__ == "__main__":
                         required=True)
     parser.add_argument('-o', '--output', dest='output', help='output file stores the feature score')
     args = parser.parse_args()
+    input_dir = args.input_dir
 
     ff = load_yaml(args.feature_function)
+    meta = load_yaml(os.path.join(input_dir, "meta.yaml"))
     need_summary_set = set()
     for spec in ff['feature_functions']:
         if spec['function'] == 'balance' or spec.get('cal_summary', False):
             need_summary_set.add(spec['metrics_name'])
+        if spec.get('factor', 1) == -1:
+            spec['factor'] = meta['tikv_instance_cnt']
+
     # visual the table
-    input_dir = args.input_dir
     f = pd.DataFrame(columns=prom_metrics_feature_basic.feature_cols)
     arr = os.listdir(input_dir)
     for i, file in enumerate(arr):
+        if Path(file).suffix == '.yaml' or Path(file).suffix == '.yml':
+            continue
         metrics = Path(file).stem
         data = pd.read_csv(os.path.join(input_dir, file), dtype='float')
         data.fillna(0, inplace=True)
