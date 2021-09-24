@@ -2,6 +2,7 @@ package prom
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/mashenjun/mole/consts"
 	"github.com/mashenjun/mole/utils"
@@ -163,12 +164,6 @@ func (c *MetricsCollect) SetCookedRecord(cr []MetricsRecord) {
 	c.cookedRecord = cr
 }
 
-type Endpoint struct {
-	Schema string
-	Host   string
-	Port   string
-}
-
 // Prepare implements the Collector interface
 func (c *MetricsCollect) Prepare(topo []Endpoint) (map[string][]CollectStat, error) {
 	if len(topo) < 1 {
@@ -245,6 +240,19 @@ func (c *MetricsCollect) Collect(topo []Endpoint) error {
 		if err != nil {
 			return err
 		}
+		// collect tikv instance cnt and save to meta.yaml
+		meta := Meta{}
+		cnt, err := c.getInstanceCnt(prom, "tikv")
+		if err != nil {
+			return err
+		}
+		meta.TiKVInstanceCnt = cnt
+		if err := meta.SaveFile(filepath.Join(
+			c.genDirPath(prom), "meta.yaml",
+		)); err != nil {
+			return err
+		}
+
 		for _, r := range c.targetRecord {
 			if _, ok := existed[r.Record]; ok {
 				bars[key].UpdateDisplay(&progress.DisplayProps{
@@ -282,6 +290,7 @@ func (c *MetricsCollect) Collect(topo []Endpoint) error {
 		}
 	}
 	tl.Wait()
+
 	return nil
 }
 
@@ -295,7 +304,7 @@ func (c *MetricsCollect) getMetricList(prom string) ([]string, error) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return nil, err
+		return nil, errors.New(resp.Status)
 	}
 
 	r := struct {
@@ -377,6 +386,41 @@ func (c *MetricsCollect) collectMetric(prom Endpoint, ts []string, mtc string, e
 		}
 	}
 	return nil
+}
+
+func (c *MetricsCollect) getInstanceCnt(prom Endpoint, job string) (int,error) {
+	u, err := url.Parse("/api/v1/targets/metadata")
+	if err != nil {
+		return 0, err
+	}
+	u.Host = prom.Address()
+	u.Scheme = prom.Schema
+	q := u.Query()
+	q.Add("metric", "process_start_time_seconds")
+	q.Add("match_target", "{job=\"tikv\"}")
+	u.RawQuery = q.Encode()
+	//u.Query().Add("match_target", "{job=\"tikv\"}")
+	resp, err := c.cli.Get(u.String())
+	if err != nil {
+		return 0, err
+	}
+
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return 0, errors.New(resp.Status)
+	}
+	data := struct {
+		Data []struct{
+			Target struct{
+				Instance string `json:"instance"`
+				Job string `json:"job"`
+			} `json:"target"`
+		} `json:"data"`
+	}{}
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		return 0, err
+	}
+	return len(data.Data), nil
 }
 
 func (c *MetricsCollect) genFileName(mtc string, idx int) string {

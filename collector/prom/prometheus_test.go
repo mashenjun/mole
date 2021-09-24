@@ -30,6 +30,7 @@ func TestMetricCollect_Collect(t *testing.T) {
 	s := strings.Split(endpoint, ":")
 	topo := []Endpoint{
 		{
+			Schema: "http",
 			Host: s[0],
 			Port: s[1],
 		},
@@ -45,19 +46,6 @@ func TestMetricCollect_Collect(t *testing.T) {
 	if _, err := mc.Prepare(topo); err != nil {
 		t.Fatal(err)
 	}
-	//sink := mc.GetSink()
-	//go func() {
-	//	if err := mc.Collect(topo); err != nil {
-	//		panic(err)
-	//	}
-	//}()
-	//for msg := range sink {
-	//	if b, err := ioutil.ReadAll(msg.Handler); err != nil {
-	//		t.Log(err)
-	//	} else {
-	//		t.Logf("%s, %v", msg.Name, len(b))
-	//	}
-	//}
 }
 
 func Test_ParseTimeRange(t *testing.T) {
@@ -69,5 +57,31 @@ func Test_ParseTimeRange(t *testing.T) {
 	}
 	for _, s := range ts {
 		t.Log(s)
+	}
+}
+
+func TestMetricsCollect_GetInstanceCnt(t *testing.T) {
+	endpoint := os.Getenv("ENDPOINT")
+	s := strings.Split(endpoint, ":")
+	topo := []Endpoint{
+		{
+			Schema: "http",
+			Host: s[0],
+			Port: s[1],
+		},
+	}
+
+	mc, err := NewMetricsCollect(
+		WithHttpCli(http.DefaultClient),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cnt, err := mc.getInstanceCnt(topo[0], "tikv");
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cnt == 0 {
+		t.Fatal("wrong result")
 	}
 }

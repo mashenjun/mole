@@ -10,6 +10,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	"github.com/mashenjun/mole/convertor/prom"
@@ -56,7 +57,13 @@ func reshapeCmd() *cobra.Command {
 			}
 			// use error group to fan out task
 			//errG, ctx := errgroup.WithContext(context.Background())
-
+			if _, err := os.Stat(filepath.Join(inputDir, "meta.yaml")); err == nil {
+				if err := os.Rename(filepath.Join(inputDir, "meta.yaml"), filepath.Join(outputDir, "meta.yaml")); err != nil {
+					fmt.Printf("move meta.yaml error: %+v", err)
+					return err
+				}
+			}
+			
 			for _, rule := range fr.Rules {
 				fmt.Printf("start reshape %v ...\n", rule.Record)
 				inputFile := filepath.Join(inputDir, fmt.Sprintf("%s.json", rule.Record))
