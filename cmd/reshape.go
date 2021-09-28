@@ -9,6 +9,7 @@ import (
 	"github.com/prometheus/common/model"
 	"golang.org/x/sync/errgroup"
 	"gopkg.in/yaml.v3"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -58,8 +59,8 @@ func reshapeCmd() *cobra.Command {
 			// use error group to fan out task
 			//errG, ctx := errgroup.WithContext(context.Background())
 			if _, err := os.Stat(filepath.Join(inputDir, "meta.yaml")); err == nil {
-				if err := os.Rename(filepath.Join(inputDir, "meta.yaml"), filepath.Join(outputDir, "meta.yaml")); err != nil {
-					fmt.Printf("move meta.yaml error: %+v", err)
+				if err := CopyFile(filepath.Join(inputDir, "meta.yaml"), filepath.Join(outputDir, "meta.yaml")); err != nil {
+					fmt.Printf("copy meta.yaml error: %+v", err)
 					return err
 				}
 			}
@@ -127,4 +128,23 @@ func (rf *FilterRule) OutputName() string {
 
 type FilterRules struct {
 	Rules []FilterRule `json:"rules" yaml:"rules"`
+}
+
+func CopyFile(from string, to string) error {
+	fin, err := os.Open(from)
+	if err != nil {
+		return err
+	}
+	defer fin.Close()
+
+	fout, err := os.Create(to)
+	if err != nil {
+		return err
+	}
+	defer fout.Close()
+
+	if _, err = io.Copy(fout, fin); err != nil {
+		return err
+	}
+	return nil
 }

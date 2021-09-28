@@ -24,7 +24,8 @@ func (ng *NoGap) GetGapInfo() ([]string, int) {
 
 type MergedGap struct {
 	// todo
-	overview []bool           // gap overview information
+	width int
+	overview []int           // gap overview information
 	slots    map[string][]int // gap information for each metric
 }
 
@@ -32,7 +33,7 @@ func (mg *MergedGap) InGap(idx int) bool {
 	if idx < 0 || idx >= len(mg.overview) {
 		return true
 	}
-	return mg.overview[idx]
+	return mg.overview[idx] < mg.width
 }
 
 func (mg *MergedGap) GetAlignedIdx(name string, idx int) int {
@@ -43,17 +44,23 @@ func (mg *MergedGap) GetAlignedIdx(name string, idx int) int {
 }
 
 func (mg *MergedGap) GetGapInfo() ([]string, int) {
-	missCnt := 0
-	for _, hasGap := range mg.overview {
-		if hasGap {
-			missCnt++
+	gapSlot := make([]int, 0)
+	for idx, cnt := range mg.overview {
+		if cnt > 0 && cnt < mg.width {
+			gapSlot = append(gapSlot, idx)
 		}
 	}
 	names := make([]string, 0, len(mg.slots))
-	for name := range mg.slots {
-		names = append(names, name)
+	for name, slot := range mg.slots {
+		for _, v := range gapSlot {
+			if slot[v] == -1 {
+				names = append(names, name)
+				break
+			}
+		}
+		//names = append(names, name)
 	}
-	return names, missCnt
+	return names, len(gapSlot)
 }
 
 type MergedGapBuilder struct {
@@ -91,12 +98,13 @@ func (gb *MergedGapBuilder) Push(name string, pairs []model.SamplePair) {
 
 func (gb *MergedGapBuilder) Build() *MergedGap {
 	mg := &MergedGap{
-		overview: make([]bool, len(gb.slotsCnt)),
+		width: gb.width,
+		overview: gb.slotsCnt,
 		slots:    gb.slots,
 	}
-	for i, cnt := range gb.slotsCnt {
-		mg.overview[i] = cnt < gb.width
-	}
+	//for i, cnt := range gb.slotsCnt {
+	//	mg.overview[i] = cnt< gb.width
+	//}
 	return mg
 }
 
