@@ -3,6 +3,7 @@ package prom
 import (
 	"github.com/mashenjun/mole/consts"
 	"github.com/prometheus/common/model"
+	"strconv"
 	"testing"
 )
 
@@ -89,5 +90,53 @@ func TestMergedGap(t *testing.T) {
 	}
 	if mg.GetAlignedIdx("no_gap", slot3) != len(streamNoGap)-1 {
 		t.Fatal("aligned idx incorrect")
+	}
+}
+
+func TestMergedGapOverlap(t *testing.T) {
+	startTs , endTs := int64(1632525600), int64(1632526185)
+	tsList := make([][]int64, 4)
+	sp := make([][]model.SamplePair, 4)
+	tsList[0] = []int64{1632525600,1632525615,1632525630,1632525645,1632525660,1632525675,1632525690,1632525705,1632525720,
+		1632525735,1632525750,1632526005,1632526020,1632526035,1632526050,1632526065,1632526080,1632526095,1632526110,
+		1632526125,1632526140,1632526155,1632526170,1632526185}
+	tsList[1] = []int64{1632525600,1632525615,1632525630,1632525645,1632525660,1632525675,1632525690,1632525705,1632525720,
+		1632525735,1632525750,1632525765,1632526005,1632526020,1632526035,1632526050,1632526065,1632526080,1632526095,
+		1632526110,1632526125,1632526140,1632526155,1632526170,1632526185}
+	tsList[2] = []int64{1632525600,1632525615,1632525630,1632525645,1632525660,1632525675,1632525690,1632525705,1632525720,
+		1632525735,1632525750,1632526005,1632526020,1632526035,1632526050,1632526065,1632526080,1632526095,1632526110,
+		1632526125,1632526140,1632526155,1632526170,1632526185}
+	tsList[3] = []int64{1632525600,1632525615,1632525630,1632525645,1632525660,1632525675,1632525690,1632525705,1632525720,
+		1632525735,1632525750,1632525765}
+
+	for i, ts := range tsList {
+		pair := make([]model.SamplePair, len(ts))
+		for j, v := range ts  {
+			pair [j] = model.SamplePair{
+				Timestamp: model.TimeFromUnix(v),
+				Value:     1,
+			}
+		}
+		sp[i] = pair
+	}
+	size := tsToSlot(startTs, endTs, 15) + 1
+	builder := NewMergedGapBuilder(4, 1632525600, consts.MetricStep, size)
+	for i, v := range sp {
+		builder.Push(strconv.Itoa(i), v)
+	}
+	gap := builder.Build()
+	info, missCnt := gap.GetGapInfo()
+	t.Log(info)
+	if len(info) != 3 {
+		t.Fatal("wrong")
+	}
+	if missCnt != 14 {
+		t.Fatal("wrong")
+	}
+	if gap.InGap(0) {
+		t.Fatal("wrong")
+	}
+	if !gap.InGap(20) {
+		t.Fatal("wrong")
 	}
 }

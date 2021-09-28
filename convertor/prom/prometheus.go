@@ -21,20 +21,20 @@ var noGap = &NoGap{}
 type MetricsMatrixConvertor struct {
 	sink chan *proto.CSVMsg
 	// 左闭右闭
-	from time.Time
-	to time.Time
+	from         time.Time
+	to           time.Time
 	filterLabels []model.LabelSet
-	input string
-	headerSend bool
-	process func(b []byte) error
+	input        string
+	headerSend   bool
+	process      func(b []byte) error
 
-	nfLevel map[string]int
+	nfLevel     map[string]int
 	nfInstances model.LabelValues
 }
 
 type MetricsMatrixConvertorOpt func(*MetricsMatrixConvertor) error
 
-func NewMetricsMatrixConvertor(opts...MetricsMatrixConvertorOpt) (*MetricsMatrixConvertor, error) {
+func NewMetricsMatrixConvertor(opts ...MetricsMatrixConvertorOpt) (*MetricsMatrixConvertor, error) {
 	mmc := &MetricsMatrixConvertor{sink: make(chan *proto.CSVMsg, 42)}
 	mmc.process = mmc.filterAndSink
 	for _, opt := range opts {
@@ -144,7 +144,7 @@ func (c *MetricsMatrixConvertor) filterAndSink(b []byte) error {
 			fmt.Printf("metrics %v has gap, miss count %+v\n", name, missCnt)
 		}
 	}
-	for idx:= 0; idx < total; idx++ {
+	for idx := 0; idx < total; idx++ {
 		if gap.InGap(idx) {
 			continue
 		}
@@ -166,7 +166,7 @@ func (c *MetricsMatrixConvertor) filterAndSink(b []byte) error {
 			row = append(row, pair.Value.String())
 		}
 		c.sink <- &proto.CSVMsg{
-			Data:    row,
+			Data: row,
 		}
 	}
 	return nil
@@ -206,7 +206,7 @@ func (c *MetricsMatrixConvertor) lastLevelRatioAndSink(b []byte) error {
 		lastLevelCnt[string(v)] = 0
 	}
 
-	for idx:= 0; idx < total; idx ++ {
+	for idx := 0; idx < total; idx++ {
 		if gap.InGap(idx) {
 			continue
 		}
@@ -223,7 +223,7 @@ func (c *MetricsMatrixConvertor) lastLevelRatioAndSink(b []byte) error {
 			// filter on timestamp
 			alignedIdx := gap.GetAlignedIdx(sampleStream.Metric.String(), idx)
 			pair := sampleStream.Values[alignedIdx]
-			if !c.inRange(pair.Timestamp.Time()){
+			if !c.inRange(pair.Timestamp.Time()) {
 				continue
 			}
 			// append timestamp first
@@ -247,7 +247,7 @@ func (c *MetricsMatrixConvertor) lastLevelRatioAndSink(b []byte) error {
 			row = append(row, strconv.FormatFloat(ratio, 'f', -1, 64))
 		}
 		c.sink <- &proto.CSVMsg{
-			Data:    row,
+			Data: row,
 		}
 	}
 	return nil
@@ -279,7 +279,7 @@ func (c *MetricsMatrixConvertor) matchLabels(target model.LabelSet) bool {
 }
 
 func match(query model.LabelSet, target model.LabelSet) bool {
-	for name, v := range query{
+	for name, v := range query {
 		value, ok := target[name]
 		if ok && value != v {
 			return false
@@ -298,31 +298,34 @@ func checkAlign(matrix model.Matrix) (bool, int, IGap) {
 	}
 	// need to calculate the gap
 	// use a builder to create the gap
-	var startTs int64 = math.MaxInt64
-	align, longest := true, len(matrix[0].Values)
+	var startTs, endTs int64 = math.MaxInt64, 0
+	longest := len(matrix[0].Values)
 	gapStreamCnt := 0
 	for _, sp := range matrix {
 		if len(sp.Values) != longest {
-			align = false
-			gapStreamCnt ++
+			gapStreamCnt++
 		}
 		startTs = mathutil.MinInt64(startTs, sp.Values[0].Timestamp.Unix())
-		longest= mathutil.Max(longest, len(sp.Values))
+		endTs = mathutil.MaxInt64(endTs, sp.Values[len(sp.Values)-1].Timestamp.Unix())
+		longest = mathutil.Max(longest, len(sp.Values))
 	}
-	if align {
+	slotSize := tsToSlot(startTs, endTs, consts.MetricStep)+1
+	if gapStreamCnt == 0 && slotSize == longest {
 		return true, longest, noGap
 	}
-
-	builder := NewMergedGapBuilder(gapStreamCnt, startTs, consts.MetricStep, longest)
+	width := gapStreamCnt
+	if longest < slotSize {
+		width = len(matrix)
+	}
+	builder := NewMergedGapBuilder(width, startTs, consts.MetricStep, slotSize)
 	for _, sp := range matrix {
-		if len(sp.Values) < longest {
+		if len(sp.Values) < slotSize {
 			builder.Push(sp.Metric.String(), sp.Values)
 		}
 	}
 	mg := builder.Build()
-	return false, longest, mg
+	return false, slotSize, mg
 }
-
 
 // the header is the same order as the label order in the json file.
 // if the metrics does not have any label, use default value `agg_val`
@@ -345,7 +348,7 @@ func (c *MetricsMatrixConvertor) extractHeader(matrix model.Matrix) []string {
 		}
 		if len(labelNames) == 0 {
 			header = append(header, "agg_val")
-		}else {
+		} else {
 			lvales := make([]string, len(labelNames))
 			for i, lname := range labelNames {
 				lvales[i] = string(sp.Metric[lname])
@@ -368,7 +371,7 @@ func (c *MetricsMatrixConvertor) levelRatioHeader(matrix model.Matrix) []string 
 		c.nfLevel[string(instanceVal)] = mathutil.Max(c.nfLevel[string(instanceVal)], level)
 	}
 	instances := make(model.LabelValues, 0, len(tmp))
-	for k:= range tmp {
+	for k := range tmp {
 		instances = append(instances, k)
 	}
 	// map to slice, need sort
@@ -379,4 +382,3 @@ func (c *MetricsMatrixConvertor) levelRatioHeader(matrix model.Matrix) []string 
 	c.nfInstances = instances
 	return header
 }
-
