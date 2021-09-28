@@ -67,8 +67,8 @@ rules:
   - record: tikv_avg_rt:write:by_instance
   - record: tikv_p99_rt:write:by_instance
   - record: tikv_qps:get:by_instance
-  - record: tikv_avg_rt:by_instance
-  - record: tikv_p99_rt:by_instance
+  - record: tikv_avg_rt:get:by_instance
+  - record: tikv_p99_rt:get:by_instance
   - record: tikv_qps:copr:by_instance
   - record: tikv_avg_rt:copr:by_instance
   - record: tikv_p99_rt:copr:by_instance

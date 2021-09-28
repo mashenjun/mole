@@ -46,9 +46,9 @@ cooked:
     expr: 'histogram_quantile(0.99,sum(rate(tikv_grpc_msg_duration_seconds_bucket{type=~"kv_perwrite|kv_commit|kv_pessimistic_lock"}[1m]))by(le, instance))'
   - record: tikv_qps:get:by_instance
     expr: 'sum(rate(tikv_grpc_msg_duration_seconds_count{type=~"kv_get|kv_batch_get"}[1m]))by(instance)'
-  - record: tikv_avg_rt:by_instance
+  - record: tikv_avg_rt:get:by_instance
     expr: 'sum(rate(tikv_grpc_msg_duration_seconds_sum{type=~"kv_get|kv_batch_get"}[1m]))by(instance)/sum(rate(tikv_grpc_msg_duration_seconds_count{type=~"kv_get|kv_batch_get"}[1m]))by(instance)'
-  - record: tikv_p99_rt:by_instance
+  - record: tikv_p99_rt:get:by_instance
     expr: 'histogram_quantile(0.99,sum(rate(tikv_grpc_msg_duration_seconds_bucket{type=~"kv_get|kv_batch_get"}[1m]))by(le,instance))'
   - record: tikv_qps:copr:by_instance
     expr: 'sum(rate(tikv_grpc_msg_duration_seconds_count{type=~"coprocessor"}[1m]))by(instance)'
