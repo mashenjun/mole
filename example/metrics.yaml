@@ -32,18 +32,42 @@ cooked:
   - record: tikv_engine_key_size:per_instance:kv_write
     expr: 'sum(tikv_engine_size_bytes{db="kv",type="write"})by(instance)/sum(tikv_engine_estimate_num_keys{cf="write",db="kv"})by(instance)'
   # for dynamic performance distribution
+  - record: tidb_qps:total
+    expr: 'sum(rate(tidb_executor_statement_total[1m]))'
+  - record: tidb_avg_rt:total
+    expr: 'sum(rate(tidb_server_handle_query_duration_seconds_sum[1m]))/sum(rate(tidb_server_handle_query_duration_seconds_count[1m]))'
+  - record: tidb_p99_rt:total
+    expr: 'histogram_quantile(0.99,sum(rate(tidb_server_handle_query_duration_seconds_bucket[1m]))by(le))'
   - record: tidb_qps:by_instance
     expr: 'sum(rate(tidb_executor_statement_total[1m]))by(instance)'
   - record: tidb_avg_rt:by_instance 
     expr: 'sum(rate(tidb_server_handle_query_duration_seconds_sum[1m]))by(instance)/sum(rate(tidb_server_handle_query_duration_seconds_count[1m]))by(instance)'
   - record: tidb_p99_rt:by_instance
     expr: 'histogram_quantile(0.99, sum(rate(tidb_server_handle_query_duration_seconds_bucket[1m]))by(le,instance))'
+  - record: tikv_qps:write:total
+    expr: 'sum(rate(tikv_grpc_msg_duration_seconds_count{type=~"kv_perwrite|kv_commit|kv_pessimistic_lock"}[1m]))'
+  - record: tikv_avg_rt:write:total
+    expr: 'sum(rate(tikv_grpc_msg_duration_seconds_sum{type=~"kv_perwrite|kv_commit|kv_pessimistic_lock"}[1m]))/sum(rate(tikv_grpc_msg_duration_seconds_count{type=~"kv_perwrite|kv_commit|kv_pessimistic_lock"}[1m]))'
+  - record: tikv_p99_rt:write:total
+    expr: 'histogram_quantile(0.99,sum(rate(tikv_grpc_msg_duration_seconds_bucket{type=~"kv_perwrite|kv_commit|kv_pessimistic_lock"}[1m]))by(le))'
+  - record: tikv_qps:get:total
+    expr: 'sum(rate(tikv_grpc_msg_duration_seconds_count{type=~"kv_get|kv_batch_get"}[1m]))'
+  - record: tikv_avg_rt:get:total
+    expr: 'sum(rate(tikv_grpc_msg_duration_seconds_sum{type=~"kv_get|kv_batch_get"}[1m]))/sum(rate(tikv_grpc_msg_duration_seconds_count{type=~"kv_get|kv_batch_get"}[1m]))'
+  - record: tikv_p99_rt:get:total
+    expr: 'histogram_quantile(0.99,sum(rate(tikv_grpc_msg_duration_seconds_bucket{type=~"kv_get|kv_batch_get"}[1m]))by(le))'
+  - record: tikv_qps:copr:total
+    expr: 'sum(rate(tikv_grpc_msg_duration_seconds_count{type=~"coprocessor"}[1m]))'
+  - record: tikv_avg_rt:copr:total
+    expr: 'sum(rate(tikv_grpc_msg_duration_seconds_sum{type=~"coprocessor"}[1m]))/sum(rate(tikv_grpc_msg_duration_seconds_count{type=~"coprocessor"}[1m]))'
+  - record: tikv_p99_rt:copr:total
+    expr: 'histogram_quantile(0.99,sum(rate(tikv_grpc_msg_duration_seconds_bucket{type=~"coprocessor"}[1m]))by(le))'
   - record: tikv_qps:write:by_instance
     expr: 'sum(rate(tikv_grpc_msg_duration_seconds_count{type=~"kv_perwrite|kv_commit|kv_pessimistic_lock"}[1m]))by(instance)'
   - record: tikv_avg_rt:write:by_instance
     expr: 'sum(rate(tikv_grpc_msg_duration_seconds_sum{type=~"kv_perwrite|kv_commit|kv_pessimistic_lock"}[1m]))by(instance)/sum(rate(tikv_grpc_msg_duration_seconds_count{type=~"kv_perwrite|kv_commit|kv_pessimistic_lock"}[1m]))by(instance)'
   - record: tikv_p99_rt:write:by_instance 
-    expr: 'histogram_quantile(0.99,sum(rate(tikv_grpc_msg_duration_seconds_bucket{type=~"kv_perwrite|kv_commit|kv_pessimistic_lock"}[1m]))by(le, instance))'
+    expr: 'histogram_quantile(0.99,sum(rate(tikv_grpc_msg_duration_seconds_bucket{type=~"kv_perwrite|kv_commit|kv_pessimistic_lock"}[1m]))by(le,instance))'
   - record: tikv_qps:get:by_instance
     expr: 'sum(rate(tikv_grpc_msg_duration_seconds_count{type=~"kv_get|kv_batch_get"}[1m]))by(instance)'
   - record: tikv_avg_rt:get:by_instance
@@ -68,3 +92,9 @@ cooked:
     expr: 'sum(rate(tikv_grpc_msg_fail_total{type!="kv_gc"}[1m]))'
   - record: tikv_io_bytes:by_instance
     expr: 'sum(rate(tikv_io_bytes[30s]))by(instance)'
+  - record: tikv_engine_block_cache_size_bytes:by_instance
+    expr: 'sum(tikv_engine_block_cache_size_bytes)by(instance)'
+  - record: tikv_cache_miss_ratio:block_cache:by_instance
+    expr: 'sum(rate(tikv_engine_cache_efficiency{type="block_cache_data_miss"}[1m]))by(instance)/sum(rate(tikv_engine_cache_efficiency{type=~"block_cache_data_hit|block_cache_data_miss"}[1m]))by(instance)'
+  - record: tikv_cache_hit_ratio:block_cache_memtable:by_instance
+    expr: 'sum(rate(tikv_engine_cache_efficiency{type=~"block_cache_data_hit|memtable_hit"}[1m]))by(instance)/sum(rate(tikv_engine_cache_efficiency{type=~"block_cache_data_hit|memtable_hit|block_cache_data_miss|memtable_miss"}[1m]))by(instance)'

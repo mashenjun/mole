@@ -37,6 +37,7 @@ def cal_weighted_feature_score(f: pd.DataFrame, ff: dict):
         unit = spec.get('unit', '')
         weight = spec.get('weight', 1)
         distance_function = spec.get('distance_function', 'delta')
+        upper_bound = spec.get('upper_bound', 1)
         need_reverse = False
         if min_val > max_val:
             need_reverse = True
@@ -52,15 +53,14 @@ def cal_weighted_feature_score(f: pd.DataFrame, ff: dict):
                     break
             if not ok:
                 raise ValueError(metrics_name + " is not found in feature df")
-        # retrieve feature metrics
+        # retrieve feature metrics and consider the factor
+        feature_value = f.loc[metrics_name][feature_name] * factor
         feature_score = 0
         if function == 'expit':
             gx_k = weighted_sigmoid.cal_k_for_gx(min_val, max_val)
             gx_m = (min_val - max_val) / 2
-            # consider the factor
-            feature_value = f.loc[metrics_name][feature_name] * factor
             # consider the unit factor
-            new_feature_value = convert_unit(feature_value, unit)
+            new_feature_value = convert_unit_upper_bound(feature_value, unit, upper_bound)
             feature_score = weighted_sigmoid.gx(gx_k, gx_m, new_feature_value)
             # print(feature_name, feature_value, feature_score)
             if need_reverse:
@@ -72,27 +72,28 @@ def cal_weighted_feature_score(f: pd.DataFrame, ff: dict):
             # thus set feature_score to zero directly
             feature_score = 0 if b == 0 else min((a - b) / b, 1)
         else:
-            feature_score = f.loc[metrics_name][feature_name]
+            feature_score = feature_value
 
         data = pd.DataFrame([[name, feature_score, weight, distance_function]], columns=score_table_cols)
         score_table = score_table.append(data, ignore_index=True)
     return score_table
 
 
-def convert_unit(val: float, unit: str):
+def convert_unit_upper_bound(val: float, unit: str, upper_bound: float):
     # if the unit is not btyes size, do nothing
     l_unit = unit.lower()
+    result = val
     if l_unit == 'kb':
-        return val / 1024
+        result = val / 1024
     elif l_unit == 'mb':
-        return val / (1024 ** 2)
+        result = val / (1024 ** 2)
     elif l_unit == 'gb':
-        return val / (1024 ** 3)
+        result = val / (1024 ** 3)
     elif l_unit == 'tb':
-        return val / (1024 ** 4)
-    else:
-        return val
-
+        result = val / (1024 ** 4)
+    if upper_bound > 1.0:
+        result = result / upper_bound
+    return result
 
 def cal_key(s: pd.Series):
     return s.apply(lambda x: x if x > 1 else 1-x)
@@ -112,6 +113,7 @@ if __name__ == "__main__":
     ff = load_yaml(args.feature_function)
     meta = load_yaml(os.path.join(input_dir, "meta.yaml"))
     need_summary_set = set()
+    # use tikv_instance_cnt to replace some factor
     for spec in ff['feature_functions']:
         if spec['function'] == 'balance' or spec.get('cal_summary', False):
             need_summary_set.add(spec['metrics_name'])

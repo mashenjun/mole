@@ -289,6 +289,7 @@ func (c *MetricsCollect) Collect(topo []Endpoint) error {
 			}(tl.Get(), r.Record, r.Expr)
 		}
 	}
+	// todo use wait group to wait all goroutine finish.
 	tl.Wait()
 
 	return nil
