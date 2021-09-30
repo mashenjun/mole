@@ -234,7 +234,7 @@ feature_functions:
     cal_summary: true
     function: 'static'
     weight: 2
-# 集群 TiDB 各个实例的表现差异
+# TiDB 间表现差异
   - name: 'QPS 在 TiDB 间的分布'
     metrics_name: 'tidb_qps:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'balance' # balance is abs(max-mean)/mean
@@ -247,6 +247,22 @@ feature_functions:
     metrics_name: 'tidb_p99_rt:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'balance' # balance is abs(max-mean)/mean
     weight: 2
+  # TiDB 集群总体表现
+  - name: 'TiDB 集群的总 QPS'
+    metrics_name: 'tidb_qps:total' # metrics_name is used to locate the row in feature.csv or feature df.
+    function: 'static'
+    distance_function: 'nrm_delta'
+    weight: 4
+  - name: 'TiDB 集群的平均延迟'
+    metrics_name: 'tidb_avg_rt:total' # metrics_name is used to locate the row in feature.csv or feature df.
+    function: 'static'
+    distance_function: 'nrm_delta'
+    weight: 4
+  - name: 'TiDB 集群的延迟分布 P99'
+    metrics_name: 'tidb_p99_rt:total' # metrics_name is used to locate the row in feature.csv or feature df.
+    function: 'static'
+    distance_function: 'nrm_delta'
+    weight: 4
 # TiKV 间的表现差异
   - name: 'QPS 在 TiKV 之间的分布情况：写请求'
     metrics_name: 'tikv_qps:write:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
@@ -284,7 +300,7 @@ feature_functions:
     metrics_name: 'tikv_p99_rt:copr:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'balance' # balance is abs(max-mean)/mean
     weight: 4
-# 集群 CPU 在实例间的差异
+# CPU 在实例间的差异
   - name: 'CPU 消耗在 TiDB 间的分布'
     metrics_name: 'tidb_cpu_usage:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'balance' # balance is abs(max-mean)/mean
@@ -297,10 +313,55 @@ feature_functions:
     metrics_name: 'tikv_io_bytes:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'balance' # balance is abs(max-mean)/mean
     weight: 4
-# 集群 TiKV 总体表现 TODO
+# TiKV 集群总体表现 TODO
+  - name: 'TiKV 集群的总 QPS：写请求'
+    metrics_name: 'tikv_qps:write:total' # metrics_name is used to locate the row in feature.csv or feature df.
+    function: 'static'
+    distance_function: 'nrm_delta'
+    weight: 4
+  - name: 'TiKV 集群的平均延迟：写请求'
+    metrics_name: 'tidb_avg_rt:write:total' # metrics_name is used to locate the row in feature.csv or feature df.
+    function: 'static'
+    distance_function: 'nrm_delta'
+    weight: 4
+  - name: 'TiKV 集群的延迟分布：写请求 P99'
+    metrics_name: 'tidb_p99_rt:write:total' # metrics_name is used to locate the row in feature.csv or feature df.
+    function: 'static'
+    distance_function: 'nrm_delta'
+    weight: 4
+  - name: 'TiKV 集群的总 QPS：kv get 请求'
+    metrics_name: 'tikv_qps:get:total' # metrics_name is used to locate the row in feature.csv or feature df.
+    function: 'static'
+    distance_function: 'nrm_delta'
+    weight: 4
+  - name: 'TiKV 集群的平均延迟：kv get 请求'
+    metrics_name: 'tidb_avg_rt:get:total' # metrics_name is used to locate the row in feature.csv or feature df.
+    function: 'static'
+    distance_function: 'nrm_delta'
+    weight: 4
+  - name: 'TiKV 集群的延迟分布：kv get 请求 P99'
+    metrics_name: 'tidb_p99_rt:get:total' # metrics_name is used to locate the row in feature.csv or feature df.
+    function: 'static'
+    distance_function: 'nrm_delta'
+    weight: 4
+  - name: 'TiKV 集群的总 QPS：copr 请求'
+    metrics_name: 'tikv_qps:copr:total' # metrics_name is used to locate the row in feature.csv or feature df.
+    function: 'static'
+    distance_function: 'nrm_delta'
+    weight: 4
+  - name: 'TiKV 集群的平均延迟：copr 请求'
+    metrics_name: 'tidb_avg_rt:copr:total' # metrics_name is used to locate the row in feature.csv or feature df.
+    function: 'static'
+    distance_function: 'nrm_delta'
+    weight: 4
+  - name: 'TiKV 集群的延迟分布：copr 请求 P99'
+    metrics_name: 'tidb_p99_rt:copr:total' # metrics_name is used to locate the row in feature.csv or feature df.
+    function: 'static'
+    distance_function: 'nrm_delta'
+    weight: 4
   - name: 'TiKV 集群 Index Scan 总体 OPS'
     metrics_name: 'tikv_copr_scan_ops:by_req:index' # metrics_name is used to locate the row in feature.csv or feature df.
-    feature_name: 'mean'
+    feature_name: 'mean' # default is mean
     function: 'static'
     distance_function: 'nrm_delta'
     weight: 4
@@ -321,4 +382,71 @@ feature_functions:
     function: 'static'
     distance_function: 'nrm_delta'
     weight: 4
-
+# 集群总体资源消耗
+  - name: '平均每 TiDB CPU 消耗'
+    metrics_name: 'tidb_cpu_usage:by_instance'
+    feature_name: 'mean_mean'
+    cal_summary: true
+    function: 'static'
+    distance_function: 'nrm_delta'
+    weight: 4
+  - name: '平均每 TiKV CPU 消耗'
+    metrics_name: 'tikv_cpu_usage:by_instance'
+    feature_name: 'mean_mean'
+    cal_summary: true
+    function: 'static'
+    distance_function: 'nrm_delta'
+    weight: 4
+  - name: '平均每 TiKV 磁盘流量'
+    metrics_name: 'tikv_io_bytes:by_instance'
+    feature_name: 'mean_mean'
+    cal_summary: true
+    function: 'expit'
+    min: 0.25
+    max: 0.60
+    weight: 4
+    upper_bound: 1.6
+    unit: GB
+# Cache 总体状态
+  - name: '每 TiKV 平均 block cache 大小'
+    metrics_name: 'tikv_engine_block_cache_size_bytes:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
+    feature_name: 'mean_mean'
+    cal_summary: true
+    function: 'static'
+    distance_function: 'nrm_delta'
+    weight: 1
+  - name: '每 TiKV 平均 block cache 大小 MAX'
+    metrics_name: 'tikv_engine_block_cache_size_bytes:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
+    feature_name: 'maximum_mean'
+    cal_summary: true
+    function: 'static'
+    distance_function: 'nrm_delta'
+    weight: 1
+  - name: '每 TiKV 平均 block cache miss 几率'
+    metrics_name: 'tikv_cache_miss_ratio:block_cache:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
+    feature_name: 'mean_mean'
+    cal_summary: true
+    function: 'static'
+    distance_function: 'nrm_delta'
+    weight: 1
+  - name: '每 TiKV 平均 block cache miss 几率 MAX'
+    metrics_name: 'tikv_cache_miss_ratio:block_cache:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
+    feature_name: 'maximum_mean'
+    cal_summary: true
+    function: 'static'
+    distance_function: 'nrm_delta'
+    weight: 1
+  - name: '每 TiKV 平均命中缓存几率'
+    metrics_name: 'tikv_cache_hit_ratio:block_cache_memtable:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
+    feature_name: 'mean_mean'
+    cal_summary: true
+    function: 'static'
+    distance_function: 'nrm_delta'
+    weight: 2
+  - name: '每 TiKV 平均命中缓存几率 MAX'
+    metrics_name: 'tikv_cache_hit_ratio:block_cache_memtable:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
+    feature_name: 'maximum_mean'
+    cal_summary: true
+    function: 'static'
+    distance_function: 'nrm_delta'
+    weight: 2

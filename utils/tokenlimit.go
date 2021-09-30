@@ -18,8 +18,7 @@ import (
 )
 
 // Token is used as a permission to keep on running.
-type Token struct {
-}
+type Token = struct{}
 
 // TokenLimiter is used to limit the number of concurrent tasks.
 type TokenLimiter struct {

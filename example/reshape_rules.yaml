@@ -60,9 +60,21 @@ rules:
     filter:
       - cf: lock
   # for dynamic performance distribution
+  - record: tidb_qps:total
+  - record: tidb_avg_rt:total
+  - record: tidb_p99_rt:total
   - record: tidb_qps:by_instance
   - record: tidb_avg_rt:by_instance 
   - record: tidb_p99_rt:by_instance
+  - record: tikv_qps:write:total
+  - record: tikv_avg_rt:write:total
+  - record: tikv_p99_rt:write:total
+  - record: tikv_qps:get:total
+  - record: tikv_avg_rt:get:total
+  - record: tikv_p99_rt:get:total
+  - record: tikv_qps:copr:total
+  - record: tikv_avg_rt:copr:total
+  - record: tikv_p99_rt:copr:total
   - record: tikv_qps:write:by_instance
   - record: tikv_avg_rt:write:by_instance
   - record: tikv_p99_rt:write:by_instance
@@ -78,4 +90,7 @@ rules:
   - record: tikv_copr_rocksdb_perf_ops:by_metric
   - record: tikv_failed_qps
   - record: tikv_io_bytes:by_instance
+  - record: tikv_engine_block_cache_size_bytes:by_instance
+  - record: tikv_cache_miss_ratio:block_cache:by_instance
+  - record: tikv_cache_hit_ratio:block_cache_memtable:by_instance
 
