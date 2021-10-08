@@ -35,8 +35,7 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--target', dest='target', help='csv file contains feature score',
                         required=True)
     parser.add_argument('-o', '--output', dest='output', help='output file stores the distance between feature score')
-    parser.add_argument('-w', '--watermark', dest='watermark', default=0.0, help='distance lower than watermark will be skipped, '
-                                                                    'default is 0.0')
+    parser.add_argument('-w', '--watermark', dest='watermark', type=float, default=0.0, help='distance lower than watermark will be skipped, default is 0.0')
     args = parser.parse_args()
 
     base_file = args.base
