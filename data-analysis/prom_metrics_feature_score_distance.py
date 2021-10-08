@@ -7,6 +7,8 @@ import tabulate
 
 import prom_metrics_feature_score
 
+print_columns = ["weight", "score", "target_score", "distance", "w_distance", "name"]
+verbose_columns = ["weight", "score", "target_score", "distance", "w_distance", "value", "detail" "name"]
 
 def cal_feature_score_distance(base: pd.DataFrame, target: pd.DataFrame):
     # table1 and table2 has same row
@@ -36,19 +38,24 @@ if __name__ == '__main__':
                         required=True)
     parser.add_argument('-o', '--output', dest='output', help='output file stores the distance between feature score')
     parser.add_argument('-w', '--watermark', dest='watermark', type=float, default=0.0, help='distance lower than watermark will be skipped, default is 0.0')
+    parser.add_argument('-vv', '--verbose', dest='verbose', type=bool, default=False, help='if verbose is set, show detail in result table')
     args = parser.parse_args()
 
     base_file = args.base
     target_file = args.target
     watermark = args.watermark
+    verbose = args.verbose
     base_score = pandas.read_csv(base_file)
     target_score = pandas.read_csv(target_file)
     result_df = cal_feature_score_distance(base_score, target_score)
     result_df['w_distance'] = result_df["weight"] * result_df["distance"]
     if args.output is not None:
         result_df.to_csv(args.output, sep=',', index=False)
-    print_columns = ["weight", "score", "target_score", "distance", "w_distance", "name"]
-    print(tabulate.tabulate(result_df[print_columns], headers=print_columns, floatfmt=".3f"))
+    if verbose:
+        print(tabulate.tabulate(result_df[verbose_columns], headers=verbose_columns, floatfmt=".3f"))
+    else:
+        # print_columns = ["weight", "score", "target_score", "distance", "w_distance", "name"]
+        print(tabulate.tabulate(result_df[print_columns], headers=print_columns, floatfmt=".3f"))
     # calculate the weighted sum of distance
     summary = pandas.DataFrame([['total distance score', result_df.loc[result_df['distance'] >= watermark, 'w_distance'].sum()
                                  / result_df.loc[result_df['distance'] >= watermark, 'weight'].sum()]],

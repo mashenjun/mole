@@ -83,7 +83,7 @@ cooked:
   - record: tidb_cpu_usage:by_instance
     expr: 'irate(process_cpu_seconds_total{job="tidb"}[30s])/tidb_server_maxprocs{job="tidb"}'
   - record: tikv_cpu_usage:by_instance
-    expr: 'sum(rate(tikv_thread_cpu_seconds_total[1m]))by(instance)'
+    expr: 'sum(rate(tikv_thread_cpu_seconds_total[1m]))by(instance)/sum(tikv_server_cpu_cores_quota)by(instance)'
   - record: tikv_copr_scan_ops:by_req
     expr: 'sum(rate(tikv_coprocessor_scan_details{req=~"index|select"}[1m]))by(req)'
   - record: tikv_copr_rocksdb_perf_ops:by_metric

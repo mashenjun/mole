@@ -10,7 +10,7 @@ import weighted_sigmoid
 import argparse
 import re
 
-score_table_cols = ['name', 'score', 'weight', 'distance_function']
+score_table_cols = ['name', 'score', 'weight', 'distance_function', 'value', 'detail']
 
 def load_feature(file: str):
     data = pd.read_csv(file)
@@ -56,6 +56,7 @@ def cal_weighted_feature_score(f: pd.DataFrame, ff: dict):
         # retrieve feature metrics and consider the factor
         feature_value = f.loc[metrics_name][feature_name] * factor
         feature_score = 0
+        detail = ''
         if function == 'expit':
             gx_k = weighted_sigmoid.cal_k_for_gx(min_val, max_val)
             gx_m = (min_val - max_val) / 2
@@ -65,16 +66,19 @@ def cal_weighted_feature_score(f: pd.DataFrame, ff: dict):
             # print(feature_name, feature_value, feature_score)
             if need_reverse:
                 feature_score = 1 - feature_score
+            detail = "expit({},{},{},{}),{}".format(min_val, max_val, upper_bound, unit, distance_function)
         elif function == 'balance':
             a = f.loc[metrics_name]['maximum_mean']
             b = f.loc[metrics_name]['mean_mean']
             # if mean_mean is zero, all instance has zero value on this metrics
             # thus set feature_score to zero directly
             feature_score = 0 if b == 0 else min((a - b) / b, 1)
+            detail = "{},{}".format(function, distance_function)
         else:
             feature_score = feature_value
+            detail = "{},{}".format(function, distance_function)
 
-        data = pd.DataFrame([[name, feature_score, weight, distance_function]], columns=score_table_cols)
+        data = pd.DataFrame([[name, feature_score, weight, distance_function, feature_value, detail]], columns=score_table_cols)
         score_table = score_table.append(data, ignore_index=True)
     return score_table
 
