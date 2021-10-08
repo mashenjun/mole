@@ -69,7 +69,15 @@ def cal_weighted_feature_score(f: pd.DataFrame, ff: dict):
             # print(feature_name, feature_value, feature_score)
             if need_reverse:
                 feature_score = 1 - feature_score
-            detail = "expit({},{},{},{}),{}".format(min_val, max_val, upper_bound, unit, distance_function)
+            if unit != '' and upper_bound > 1:
+                detail = "expit({},{},{},{}),{}".format(min_val, max_val, upper_bound, unit, distance_function)
+            elif unit == '':
+                detail = "expit({},{},{}),{}".format(min_val, max_val, upper_bound, distance_function)
+            elif upper_bound >1:
+                detail = "expit({},{},{}),{}".format(min_val, max_val, unit, distance_function)
+            else:
+                detail = "expit({},{}),{}".format(min_val, max_val, distance_function)
+
         elif function == 'balance':
             a = f.loc[metrics_name]['maximum_mean']
             b = f.loc[metrics_name]['mean_mean']
