@@ -71,7 +71,7 @@ def cal_weighted_feature_score(f: pd.DataFrame, ff: dict):
                 feature_score = 1 - feature_score
             if unit != '' and upper_bound > 1:
                 detail = "expit({},{},{},{}),{}".format(min_val, max_val, upper_bound, unit, distance_function)
-            elif upper_bound == 1:
+            elif upper_bound > 1:
                 detail = "expit({},{},{}),{}".format(min_val, max_val, upper_bound, distance_function)
             elif unit != '':
                 detail = "expit({},{},{}),{}".format(min_val, max_val, unit, distance_function)
