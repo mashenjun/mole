@@ -320,12 +320,12 @@ feature_functions:
     distance_function: 'nrm_delta'
     weight: 4
   - name: 'TiKV 集群的平均延迟：写请求'
-    metrics_name: 'tidb_avg_rt:write:total' # metrics_name is used to locate the row in feature.csv or feature df.
+    metrics_name: 'tikv_avg_rt:write:total' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'static'
     distance_function: 'nrm_delta'
     weight: 4
   - name: 'TiKV 集群的延迟分布：写请求 P99'
-    metrics_name: 'tidb_p99_rt:write:total' # metrics_name is used to locate the row in feature.csv or feature df.
+    metrics_name: 'tikv_p99_rt:write:total' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'static'
     distance_function: 'nrm_delta'
     weight: 4
@@ -335,12 +335,12 @@ feature_functions:
     distance_function: 'nrm_delta'
     weight: 4
   - name: 'TiKV 集群的平均延迟：kv get 请求'
-    metrics_name: 'tidb_avg_rt:get:total' # metrics_name is used to locate the row in feature.csv or feature df.
+    metrics_name: 'tikv_avg_rt:get:total' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'static'
     distance_function: 'nrm_delta'
     weight: 4
   - name: 'TiKV 集群的延迟分布：kv get 请求 P99'
-    metrics_name: 'tidb_p99_rt:get:total' # metrics_name is used to locate the row in feature.csv or feature df.
+    metrics_name: 'tikv_p99_rt:get:total' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'static'
     distance_function: 'nrm_delta'
     weight: 4
@@ -350,12 +350,12 @@ feature_functions:
     distance_function: 'nrm_delta'
     weight: 4
   - name: 'TiKV 集群的平均延迟：copr 请求'
-    metrics_name: 'tidb_avg_rt:copr:total' # metrics_name is used to locate the row in feature.csv or feature df.
+    metrics_name: 'tikv_avg_rt:copr:total' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'static'
     distance_function: 'nrm_delta'
     weight: 4
   - name: 'TiKV 集群的延迟分布：copr 请求 P99'
-    metrics_name: 'tidb_p99_rt:copr:total' # metrics_name is used to locate the row in feature.csv or feature df.
+    metrics_name: 'tikv_p99_rt:copr:total' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'static'
     distance_function: 'nrm_delta'
     weight: 4
