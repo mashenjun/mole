@@ -10,6 +10,9 @@ import weighted_sigmoid
 import argparse
 import re
 
+print_columns = ["weight", "score", "name"]
+verbose_columns = ["weight", "score", "value", "detail", "name"]
+
 score_table_cols = ['name', 'score', 'weight', 'distance_function', 'value', 'detail']
 
 def load_feature(file: str):
@@ -111,8 +114,10 @@ if __name__ == "__main__":
     parser.add_argument('-i', '--input', dest='input_dir', help='input dir contains reshaped metrics, in csv format',
                         required=True)
     parser.add_argument('-o', '--output', dest='output', help='output file stores the feature score')
+    parser.add_argument('-vv', '--verbose', dest='verbose', type=bool, default=False, help='if verbose is set, show detail in result table')
     args = parser.parse_args()
     input_dir = args.input_dir
+    verbose = args.verbose
 
     ff = load_yaml(args.feature_function)
     meta = load_yaml(os.path.join(input_dir, "meta.yaml"))
@@ -148,8 +153,10 @@ if __name__ == "__main__":
         score_table.to_csv(args.output, sep=',', index=False)
     # polish the score_table to get a more viewable result
     score_table.sort_values(by='score', ascending=True, ignore_index=True, inplace=True, key=cal_key)
-
-    print_columns = ["weight", "score", "name"]
-    print(tabulate.tabulate(score_table[print_columns], headers=print_columns, floatfmt=".3f"))
+    if verbose:
+        print(tabulate.tabulate(score_table[verbose_columns], headers=verbose, floatfmt=".3f"))
+    else:
+        # print_columns = ["weight", "score", "name"]
+        print(tabulate.tabulate(score_table[print_columns], headers=print_columns, floatfmt=".3f"))
 
 

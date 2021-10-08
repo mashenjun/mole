@@ -8,7 +8,7 @@ import tabulate
 import prom_metrics_feature_score
 
 print_columns = ["weight", "score", "target_score", "distance", "w_distance", "name"]
-verbose_columns = ["weight", "score", "target_score", "distance", "w_distance", "value", "detail" "name"]
+verbose_columns = ["weight", "score", "target_score", "distance", "w_distance", "value", "detail", "name"]
 
 def cal_feature_score_distance(base: pd.DataFrame, target: pd.DataFrame):
     # table1 and table2 has same row
