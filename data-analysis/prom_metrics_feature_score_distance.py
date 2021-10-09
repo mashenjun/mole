@@ -7,13 +7,20 @@ import tabulate
 
 import prom_metrics_feature_score
 
+R = "\033[0;31;40m" #RED
+G = "\033[0;32;40m" # GREEN
+Y = "\033[0;33;40m" # Yellow
+B = "\033[0;34;40m" # Blue
+N = "\033[0m" # Reset
+
 print_columns = ["weight", "score", "target_score", "distance", "w_distance", "name"]
-verbose_columns = ["weight", "score", "target_score", "distance", "w_distance", "value", "detail", "name"]
+verbose_columns = ["weight", "score", "target_score", "distance", "w_distance", "value", "target_value", "detail", "name"]
 
 def cal_feature_score_distance(base: pd.DataFrame, target: pd.DataFrame):
     # table1 and table2 has same row
     # different distance_function lead to different calculation logic
     base['target_score'] = target['score']
+    base['target_value'] = target['value']
     base['denominator'] = base.apply(
         lambda x: max(x['score'], x['target_score']) if x['distance_function'] == 'nrm_delta' else 1,
         axis=1)

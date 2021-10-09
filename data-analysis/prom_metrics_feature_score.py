@@ -12,8 +12,8 @@ import re
 
 print_columns = ["weight", "score", "name"]
 verbose_columns = ["weight", "score", "value", "detail", "name"]
-
 score_table_cols = ['name', 'score', 'weight', 'distance_function', 'value', 'detail']
+
 
 def load_feature(file: str):
     data = pd.read_csv(file)
@@ -95,7 +95,7 @@ def cal_weighted_feature_score(f: pd.DataFrame, ff: dict):
 
 
 def convert_unit_upper_bound(val: float, unit: str, upper_bound: float):
-    # if the unit is not btyes size, do nothing
+    # if the unit is not bytes size, do nothing
     l_unit = unit.lower()
     result = val
     if l_unit == 'kb':
@@ -162,9 +162,8 @@ if __name__ == "__main__":
     # polish the score_table to get a more viewable result
     score_table.sort_values(by='score', ascending=True, ignore_index=True, inplace=True, key=cal_key)
     if verbose:
-        print(tabulate.tabulate(score_table[verbose_columns], headers=verbose, floatfmt=".3f"))
+        print(tabulate.tabulate(score_table[verbose_columns], headers=verbose_columns, floatfmt=".3f"))
     else:
-        # print_columns = ["weight", "score", "name"]
         print(tabulate.tabulate(score_table[print_columns], headers=print_columns, floatfmt=".3f"))
 
 
