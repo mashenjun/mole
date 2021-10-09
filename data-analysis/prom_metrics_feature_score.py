@@ -10,7 +10,10 @@ import weighted_sigmoid
 import argparse
 import re
 
-score_table_cols = ['name', 'score', 'weight', 'distance_function']
+print_columns = ["weight", "score", "name"]
+verbose_columns = ["weight", "score", "value", "detail", "name"]
+score_table_cols = ['name', 'score', 'weight', 'distance_function', 'value', 'detail']
+
 
 def load_feature(file: str):
     data = pd.read_csv(file)
@@ -56,6 +59,7 @@ def cal_weighted_feature_score(f: pd.DataFrame, ff: dict):
         # retrieve feature metrics and consider the factor
         feature_value = f.loc[metrics_name][feature_name] * factor
         feature_score = 0
+        detail = ''
         if function == 'expit':
             gx_k = weighted_sigmoid.cal_k_for_gx(min_val, max_val)
             gx_m = (min_val - max_val) / 2
@@ -65,22 +69,33 @@ def cal_weighted_feature_score(f: pd.DataFrame, ff: dict):
             # print(feature_name, feature_value, feature_score)
             if need_reverse:
                 feature_score = 1 - feature_score
+            if unit != '' and upper_bound > 1:
+                detail = "expit({},{},{},{}),{}".format(min_val, max_val, upper_bound, unit, distance_function)
+            elif upper_bound > 1:
+                detail = "expit({},{},{}),{}".format(min_val, max_val, upper_bound, distance_function)
+            elif unit != '':
+                detail = "expit({},{},{}),{}".format(min_val, max_val, unit, distance_function)
+            else:
+                detail = "expit({},{}),{}".format(min_val, max_val, distance_function)
+
         elif function == 'balance':
             a = f.loc[metrics_name]['maximum_mean']
             b = f.loc[metrics_name]['mean_mean']
             # if mean_mean is zero, all instance has zero value on this metrics
             # thus set feature_score to zero directly
             feature_score = 0 if b == 0 else min((a - b) / b, 1)
+            detail = "{},{}".format(function, distance_function)
         else:
             feature_score = feature_value
+            detail = "{},{}".format(function, distance_function)
 
-        data = pd.DataFrame([[name, feature_score, weight, distance_function]], columns=score_table_cols)
+        data = pd.DataFrame([[name, feature_score, weight, distance_function, feature_value, detail]], columns=score_table_cols)
         score_table = score_table.append(data, ignore_index=True)
     return score_table
 
 
 def convert_unit_upper_bound(val: float, unit: str, upper_bound: float):
-    # if the unit is not btyes size, do nothing
+    # if the unit is not bytes size, do nothing
     l_unit = unit.lower()
     result = val
     if l_unit == 'kb':
@@ -107,8 +122,10 @@ if __name__ == "__main__":
     parser.add_argument('-i', '--input', dest='input_dir', help='input dir contains reshaped metrics, in csv format',
                         required=True)
     parser.add_argument('-o', '--output', dest='output', help='output file stores the feature score')
+    parser.add_argument('-vv', '--verbose', dest='verbose', type=bool, default=False, help='if verbose is set, show detail in result table')
     args = parser.parse_args()
     input_dir = args.input_dir
+    verbose = args.verbose
 
     ff = load_yaml(args.feature_function)
     meta = load_yaml(os.path.join(input_dir, "meta.yaml"))
@@ -144,8 +161,9 @@ if __name__ == "__main__":
         score_table.to_csv(args.output, sep=',', index=False)
     # polish the score_table to get a more viewable result
     score_table.sort_values(by='score', ascending=True, ignore_index=True, inplace=True, key=cal_key)
-
-    print_columns = ["weight", "score", "name"]
-    print(tabulate.tabulate(score_table[print_columns], headers=print_columns, floatfmt=".3f"))
+    if verbose:
+        print(tabulate.tabulate(score_table[verbose_columns], headers=verbose_columns, floatfmt=".3f"))
+    else:
+        print(tabulate.tabulate(score_table[print_columns], headers=print_columns, floatfmt=".3f"))
 
 
