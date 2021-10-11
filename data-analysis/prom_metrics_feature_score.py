@@ -98,6 +98,7 @@ def convert_unit_upper_bound(val: float, unit: str, upper_bound: float):
     # if the unit is not bytes size, do nothing
     l_unit = unit.lower()
     result = val
+    # bytes to other unit
     if l_unit == 'kb':
         result = val / 1024
     elif l_unit == 'mb':
@@ -106,8 +107,13 @@ def convert_unit_upper_bound(val: float, unit: str, upper_bound: float):
         result = val / (1024 ** 3)
     elif l_unit == 'tb':
         result = val / (1024 ** 4)
+    # seconds to other unit
+    elif l_unit == 'ms':
+        result = val * 1000
+
     if upper_bound > 1.0:
         result = result / upper_bound
+
     return result
 
 def cal_key(s: pd.Series):

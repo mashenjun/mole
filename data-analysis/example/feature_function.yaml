@@ -7,7 +7,7 @@ feature_functions:
     function: 'expit' # expit is a weighted sigmoid function
     min: 0.5
     max: 100
-    unit: TB
+    unit: 'TB'
     factor: &tikvcnt -1
     weight: 4
   - name: '每 TiKV 平均存储数据量'
@@ -15,7 +15,7 @@ feature_functions:
     function: 'expit' # expit is a weighted sigmoid function
     min: 0.5
     max: 10
-    unit: TB
+    unit: 'TB'
     weight: 2
   - name: 'Region 总量'
     metrics_name: 'tikv_raftstore_region_count:avg_type:region' # metrics_name is used to locate the row in feature.csv or feature df.
@@ -241,13 +241,15 @@ feature_functions:
     metrics_name: 'tidb_qps:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'balance' # balance is abs(max-mean)/mean
     weight: 2
-  - name: '平均延迟在 TiDB 间的分布'
+  - name: 'AVG RT 在 TiDB 间的分布'
     metrics_name: 'tidb_avg_rt:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'balance' # balance is abs(max-mean)/mean
+    unit: 'ms'
     weight: 2
-  - name: '长尾延迟在 TiDB 间的分布 P99'
+  - name: 'P99 RT 在 TiDB 间的分布'
     metrics_name: 'tidb_p99_rt:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'balance' # balance is abs(max-mean)/mean
+    unit: 'ms'
     weight: 2
   # TiDB 集群总体表现
   - name: 'TiDB 集群的总 QPS'
@@ -255,52 +257,60 @@ feature_functions:
     function: 'static'
     distance_function: 'nrm_delta'
     weight: 4
-  - name: 'TiDB 集群的平均延迟'
+  - name: 'TiDB 集群的 AVG RT'
     metrics_name: 'tidb_avg_rt:total' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'static'
     distance_function: 'nrm_delta'
+    unit: 'ms'
     weight: 4
-  - name: 'TiDB 集群的延迟分布 P99'
+  - name: 'TiDB 集群的 P99 RT'
     metrics_name: 'tidb_p99_rt:total' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'static'
     distance_function: 'nrm_delta'
+    unit: 'ms'
     weight: 4
 # TiKV 间的表现差异
   - name: 'QPS 在 TiKV 之间的分布情况：写请求'
     metrics_name: 'tikv_qps:write:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'balance' # balance is abs(max-mean)/mean
     weight: 4
-  - name: '平均延迟在 TiKV 之间的分布情况：写请求'
+  - name: 'AVG RT 在 TiKV 之间的分布情况：写请求'
     metrics_name: 'tikv_avg_rt:write:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'balance' # balance is abs(max-mean)/mean
+    unit: 'ms'
     weight: 4
-  - name: '长尾延迟在 TiKV 之间的分布情况：写请求'
+  - name: 'P99 RT 在 TiKV 之间的分布情况：写请求'
     metrics_name: 'tikv_p99_rt:write:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'balance' # balance is abs(max-mean)/mean
     weight: 4
+    unit: 'ms'
   - name: 'QPS 在 TiKV 之间的分布情况：kv get 请求'
     metrics_name: 'tikv_qps:get:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'balance' # balance is abs(max-mean)/mean
     weight: 4
-  - name: '平均延迟在 TiKV 之间的分布情况：kv get 请求'
+  - name: 'AVG RT 在 TiKV 之间的分布情况：kv get 请求'
     metrics_name: 'tikv_avg_rt:get:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'balance' # balance is abs(max-mean)/mean
+    unit: 'ms'
     weight: 4
-  - name: '长尾延迟在 TiKV 之间的分布情况：kv get 请求'
+  - name: 'P99 RT 在 TiKV 之间的分布情况：kv get 请求'
     metrics_name: 'tikv_p99_rt:get:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'balance' # balance is abs(max-mean)/mean
+    unit: 'ms'
     weight: 4
   - name: 'QPS 在 TiKV 之间的分布情况：copr 请求'
     metrics_name: 'tikv_qps:copr:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'balance' # balance is abs(max-mean)/mean
     weight: 4
-  - name: '平均延迟在 TiKV 之间的分布情况：copr 请求'
+  - name: 'AVG RT 在 TiKV 之间的分布情况：copr 请求'
     metrics_name: 'tikv_avg_rt:copr:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'balance' # balance is abs(max-mean)/mean
+    unit: 'ms'
     weight: 4
-  - name: '长尾延迟在 TiKV 之间的分布情况：copr 请求'
+  - name: 'P99 RT在 TiKV 之间的分布情况：copr 请求'
     metrics_name: 'tikv_p99_rt:copr:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'balance' # balance is abs(max-mean)/mean
+    unit: 'ms'
     weight: 4
 # CPU 在实例间的差异
   - name: 'CPU 消耗在 TiDB 间的分布'
@@ -321,45 +331,51 @@ feature_functions:
     function: 'static'
     distance_function: 'nrm_delta'
     weight: 4
-  - name: 'TiKV 集群的平均延迟：写请求'
+  - name: 'TiKV 集群的 AVG RT：写请求'
     metrics_name: 'tikv_avg_rt:write:total:agg_val' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'static'
     distance_function: 'nrm_delta'
+    unit: 'ms'
     weight: 4
-  - name: 'TiKV 集群的延迟分布：写请求 P99'
+  - name: 'TiKV 集群的 P99 RT：写请求'
     metrics_name: 'tikv_p99_rt:write:total:agg_val' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'static'
     distance_function: 'nrm_delta'
+    unit: 'ms'
     weight: 4
   - name: 'TiKV 集群的总 QPS：kv get 请求'
     metrics_name: 'tikv_qps:get:total:agg_val' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'static'
     distance_function: 'nrm_delta'
     weight: 4
-  - name: 'TiKV 集群的平均延迟：kv get 请求'
+  - name: 'TiKV 集群的 AVG RT：kv get 请求'
     metrics_name: 'tikv_avg_rt:get:total:agg_val' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'static'
     distance_function: 'nrm_delta'
+    unit: 'ms'
     weight: 4
-  - name: 'TiKV 集群的延迟分布：kv get 请求 P99'
+  - name: 'TiKV 集群的 P99 RT：kv get 请求'
     metrics_name: 'tikv_p99_rt:get:total:agg_val' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'static'
     distance_function: 'nrm_delta'
+    unit: 'ms'
     weight: 4
   - name: 'TiKV 集群的总 QPS：copr 请求'
     metrics_name: 'tikv_qps:copr:total:agg_val' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'static'
     distance_function: 'nrm_delta'
     weight: 4
-  - name: 'TiKV 集群的平均延迟：copr 请求'
+  - name: 'TiKV 集群的 AVG RT：copr 请求'
     metrics_name: 'tikv_avg_rt:copr:total:agg_val' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'static'
     distance_function: 'nrm_delta'
+    unit: 'ms'
     weight: 4
-  - name: 'TiKV 集群的延迟分布：copr 请求 P99'
+  - name: 'TiKV 集群的 P99 RT：copr 请求 P99'
     metrics_name: 'tikv_p99_rt:copr:total:agg_val' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'static'
     distance_function: 'nrm_delta'
+    unit: 'ms'
     weight: 4
   - name: 'TiKV 集群 Index Scan 总体 OPS'
     metrics_name: 'tikv_copr_scan_ops:by_req:index' # metrics_name is used to locate the row in feature.csv or feature df.
