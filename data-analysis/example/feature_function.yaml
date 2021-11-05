@@ -34,23 +34,23 @@ feature_functions:
   # 数据在 TiKV 实例间的分布
   - name: '数据量在 TiKV 实例间的分布'
     metrics_name: 'tikv_engine_size_bytes:sum_instance' # metrics_name is used to locate the row in feature.csv or feature df.
-    function: 'balance' # expit is a weighted sigmoid function
+    function: 'balance' # ebalance is (maximum_mean-mean_mean)/mean_mean
     weight: 4
   - name: 'Region 数量在 TiKV 实例间的分布'
     metrics_name: 'tikv_raftstore_region_count:filter_region' # metrics_name is used to locate the row in feature.csv or feature df.
-    function: 'balance' # expit is a weighted sigmoid function
+    function: 'balance' # balance is (maximum_mean-mean_mean)/mean_mean
     weight: 4
   - name: 'Leader 数量在 TiKV 实例间的分布'
     metrics_name: 'tikv_raftstore_region_count:filter_leader' # metrics_name is used to locate the row in feature.csv or feature df.
-    function: 'balance' # expit is a weighted sigmoid function
+    function: 'balance' # balance is (maximum_mean-mean_mean)/mean_mean
     weight: 4
   - name: '存储容量在 TiKV 实例间的分布'
     metrics_name: 'tikv_store_size_bytes:filter_capacity' # metrics_name is used to locate the row in feature.csv or feature df.
-    function: 'balance' # expit is a weighted sigmoid function
+    function: 'balance' # balance is (maximum_mean-mean_mean)/mean_mean
     weight: 2
   - name: '可用容量在 TiKV 实例间的分布'
     metrics_name: 'tikv_store_size_bytes:filter_available' # metrics_name is used to locate the row in feature.csv or feature df.
-    function: 'balance' # expit is a weighted sigmoid function
+    function: 'balance' # balance is (maximum_mean-mean_mean)/mean_mean
     weight: 2
 # RocksDB 状态
   - name: '集群每 TiKV 平均每层 SST 数量：default CF'
@@ -239,17 +239,24 @@ feature_functions:
 # TiDB 间表现差异
   - name: 'QPS 在 TiDB 间的分布'
     metrics_name: 'tidb_qps:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
-    function: 'balance' # balance is abs(max-mean)/mean
+    feature_name: 'max_mean_area_ratio'
+    cal_summary: true
+    function: 'static'
+    unit: '%'
     weight: 2
   - name: 'AVG RT 在 TiDB 间的分布'
     metrics_name: 'tidb_avg_rt:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
-    function: 'balance' # balance is abs(max-mean)/mean
-    unit: 'ms'
+    feature_name: 'max_mean_area_ratio'
+    cal_summary: true
+    function: 'static'
+    unit: '%'
     weight: 2
   - name: 'P99 RT 在 TiDB 间的分布'
     metrics_name: 'tidb_p99_rt:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
-    function: 'balance' # balance is abs(max-mean)/mean
-    unit: 'ms'
+    feature_name: 'max_mean_area_ratio'
+    cal_summary: true
+    function: 'static'
+    unit: '%'
     weight: 2
   # TiDB 集群总体表现
   - name: 'TiDB 集群的总 QPS'
@@ -272,58 +279,79 @@ feature_functions:
 # TiKV 间的表现差异
   - name: 'QPS 在 TiKV 之间的分布情况：写请求'
     metrics_name: 'tikv_qps:write:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
-    function: 'balance' # balance is abs(max-mean)/mean
+    feature_name: 'max_mean_area_ratio'
+    cal_summary: true
+    function: 'static'
+    unit: '%'
     weight: 4
   - name: 'AVG RT 在 TiKV 之间的分布情况：写请求'
     metrics_name: 'tikv_avg_rt:write:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
-    function: 'balance' # balance is abs(max-mean)/mean
-    unit: 'ms'
+    feature_name: 'max_mean_area_ratio'
+    cal_summary: true
+    function: 'static'
+    unit: '%'
     weight: 4
   - name: 'P99 RT 在 TiKV 之间的分布情况：写请求'
     metrics_name: 'tikv_p99_rt:write:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
-    function: 'balance' # balance is abs(max-mean)/mean
+    feature_name: 'max_mean_area_ratio'
+    cal_summary: true
+    function: 'static'
+    unit: '%'
     weight: 4
-    unit: 'ms'
   - name: 'QPS 在 TiKV 之间的分布情况：kv get 请求'
     metrics_name: 'tikv_qps:get:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
-    function: 'balance' # balance is abs(max-mean)/mean
+    feature_name: 'max_mean_area_ratio'
+    cal_summary: true
+    function: 'static'
+    unit: '%'
     weight: 4
   - name: 'AVG RT 在 TiKV 之间的分布情况：kv get 请求'
     metrics_name: 'tikv_avg_rt:get:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
-    function: 'balance' # balance is abs(max-mean)/mean
-    unit: 'ms'
+    feature_name: 'max_mean_area_ratio'
+    cal_summary: true
+    function: 'static'
+    unit: '%'
     weight: 4
   - name: 'P99 RT 在 TiKV 之间的分布情况：kv get 请求'
     metrics_name: 'tikv_p99_rt:get:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
-    function: 'balance' # balance is abs(max-mean)/mean
-    unit: 'ms'
+    feature_name: 'max_mean_area_ratio'
+    cal_summary: true
+    function: 'static'
+    unit: '%'
     weight: 4
   - name: 'QPS 在 TiKV 之间的分布情况：copr 请求'
     metrics_name: 'tikv_qps:copr:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
-    function: 'balance' # balance is abs(max-mean)/mean
+    feature_name: 'max_mean_area_ratio'
+    cal_summary: true
+    function: 'static'
+    unit: '%'
     weight: 4
   - name: 'AVG RT 在 TiKV 之间的分布情况：copr 请求'
     metrics_name: 'tikv_avg_rt:copr:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
-    function: 'balance' # balance is abs(max-mean)/mean
-    unit: 'ms'
+    feature_name: 'max_mean_area_ratio'
+    cal_summary: true
+    function: 'static'
+    unit: '%'
     weight: 4
   - name: 'P99 RT在 TiKV 之间的分布情况：copr 请求'
     metrics_name: 'tikv_p99_rt:copr:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
-    function: 'balance' # balance is abs(max-mean)/mean
-    unit: 'ms'
+    feature_name: 'max_mean_area_ratio'
+    cal_summary: true
+    function: 'static'
+    unit: '%'
     weight: 4
 # CPU 在实例间的差异
   - name: 'CPU 消耗在 TiDB 间的分布'
     metrics_name: 'tidb_cpu_usage:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
-    function: 'balance' # balance is abs(max-mean)/mean
+    function: 'balance' # balance is (maximum_mean-mean_mean)/mean_mean
     weight: 4
   - name: 'CPU 消耗在 TiKV 间的分布'
     metrics_name: 'tikv_cpu_usage:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
-    function: 'balance' # balance is abs(max-mean)/mean
+    function: 'balance' # balance is (maximum_mean-mean_mean)/mean_mean
     weight: 4
   - name: '磁盘流量在 TiKV 间的分布'
     metrics_name: 'tikv_io_bytes:by_instance' # metrics_name is used to locate the row in feature.csv or feature df.
-    function: 'balance' # balance is abs(max-mean)/mean
+    function: 'balance' # balance is (maximum_mean-mean_mean)/mean_mean todo, 尖刺类型的
     weight: 4
 # TiKV 集群总体表现 TODO
   - name: 'TiKV 集群的总 QPS：写请求'
@@ -371,7 +399,7 @@ feature_functions:
     distance_function: 'nrm_delta'
     unit: 'ms'
     weight: 4
-  - name: 'TiKV 集群的 P99 RT：copr 请求 P99'
+  - name: 'TiKV 集群的 P99 RT：copr 请求'
     metrics_name: 'tikv_p99_rt:copr:total:agg_val' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'static'
     distance_function: 'nrm_delta'
@@ -390,7 +418,7 @@ feature_functions:
     distance_function: 'nrm_delta'
     weight: 4
   - name: 'TiKV 集群失败总体 QPS'
-    metrics_name: tikv_failed_qps
+    metrics_name: 'tikv_failed_qps'
     feature_name: 'mean'
     function: 'static'
     weight: 4

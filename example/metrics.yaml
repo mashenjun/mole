@@ -81,7 +81,7 @@ cooked:
   - record: tikv_p99_rt:copr:by_instance
     expr: 'histogram_quantile(0.99,sum(rate(tikv_grpc_msg_duration_seconds_bucket{type=~"coprocessor"}[1m]))by(le,instance))'
   - record: tidb_cpu_usage:by_instance
-    expr: 'irate(process_cpu_seconds_total{job="tidb"}[30s])/tidb_server_maxprocs{job="tidb"}'
+    expr: 'sum(irate(process_cpu_seconds_total{job=~".*tidb"}[30s]))by(instance)/sum(tidb_server_maxprocs{job=~".*tidb"})by(instance)'
   - record: tikv_cpu_usage:by_instance
     expr: 'sum(rate(tikv_thread_cpu_seconds_total[1m]))by(instance)/sum(tikv_server_cpu_cores_quota)by(instance)'
   - record: tikv_copr_scan_ops:by_req
@@ -89,7 +89,7 @@ cooked:
   - record: tikv_copr_rocksdb_perf_ops:by_metric
     expr: 'sum(rate(tikv_coprocessor_rocksdb_perf{metric="internal_delete_skipped_count"}[1m]))by(metric)'
   - record: tikv_failed_qps
-    expr: 'sum(rate(tikv_grpc_msg_fail_total{type!="kv_gc"}[1m]))'
+    expr: 'sum(rate(tikv_grpc_msg_fail_total{type!="kv_gc"}[1m])) or vector(0)'
   - record: tikv_io_bytes:by_instance
     expr: 'sum(rate(tikv_io_bytes[30s]))by(instance)'
   - record: tikv_engine_block_cache_size_bytes:by_instance
