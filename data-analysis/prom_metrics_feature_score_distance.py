@@ -1,10 +1,7 @@
-import sys
 import argparse
-
-import pandas
 import pandas as pd
 import tabulate
-
+import numpy as np
 import prom_metrics_feature_score
 
 R = "\033[0;31;40m" #RED
@@ -13,8 +10,9 @@ Y = "\033[0;33;40m" # Yellow
 B = "\033[0;34;40m" # Blue
 N = "\033[0m" # Reset
 
-print_columns = ["weight", "score", "target_score", "distance", "w_distance", "name"]
-verbose_columns = ["weight", "score", "target_score", "distance", "w_distance", "value", "target_value", "detail", "name"]
+print_columns = ["weight", "score", "target_score", "distance", "name"]
+verbose_columns = ["weight", "score", "target_score", "value", "target_value", "distance", "detail", "name"]
+
 
 def cal_feature_score_distance(base: pd.DataFrame, target: pd.DataFrame):
     # table1 and table2 has same row
@@ -52,8 +50,8 @@ if __name__ == '__main__':
     target_file = args.target
     watermark = args.watermark
     verbose = args.verbose
-    base_score = pandas.read_csv(base_file)
-    target_score = pandas.read_csv(target_file)
+    base_score = pd.read_csv(base_file)
+    target_score = pd.read_csv(target_file)
     result_df = cal_feature_score_distance(base_score, target_score)
     result_df['w_distance'] = result_df["weight"] * result_df["distance"]
     if args.output is not None:
@@ -64,8 +62,23 @@ if __name__ == '__main__':
         # print_columns = ["weight", "score", "target_score", "distance", "w_distance", "name"]
         print(tabulate.tabulate(result_df[print_columns], headers=print_columns, floatfmt=".3f"))
     # calculate the weighted sum of distance
-    summary = pandas.DataFrame([['total distance score', result_df.loc[result_df['distance'] >= watermark, 'w_distance'].sum()
-                                 / result_df.loc[result_df['distance'] >= watermark, 'weight'].sum()]],
-                               columns=['summary', 'value'])
+    result_df = result_df.loc[result_df['valid'] == True]
+    summary = pd.DataFrame([['total weighted distance', result_df.loc[result_df['distance'] >= watermark, 'w_distance'].sum()
+                                 / result_df.loc[result_df['distance'] >= watermark, 'weight'].sum()]], columns=['summary', 'value'])
+    # print(tabulate.tabulate(summary, headers=summary.columns, floatfmt=".3f", showindex=False))
+    # do normalized before calculate Euclidean distance
+    result_df['score_nrm'] = result_df.apply(lambda x: x['score'] / max(x['score'], x['target_score']) if x['score'] > 1 else x['score'],
+        axis=1)
+    result_df['target_score_nrm'] = result_df.apply(
+        lambda x: x['target_score'] / max(x['score'], x['target_score']) if x['target_score'] > 1 else x['target_score'],
+        axis=1)
+    result_df['w_score'] = result_df['score'] * result_df['weight']
+    result_df['w_target_score'] = result_df['target_score'] * result_df['weight']
+    # calculate Euclidean distance
+    eu_dist = np.linalg.norm(result_df['score_nrm'] - result_df['target_score_nrm'])
+    summary.loc[len(summary.index)] = ['total Euclidean distance', eu_dist / (1 + eu_dist)]
+    # dist = np.sqrt(np.sum((result_df['score_nrm']-result_df['target_score_nrm']) ** 2))
+    cos = np.dot(result_df['w_score'], result_df['w_target_score']) / (np.linalg.norm(result_df['w_score']) * np.linalg.norm(result_df['w_target_score']))
+    summary.loc[len(summary.index)] = ['total Cosine distance', 1 - cos]
     print(tabulate.tabulate(summary, headers=summary.columns, floatfmt=".3f", showindex=False))
     # print("total distance score: {0:.3f}".format(weighted_sum.sum() / result_df['weight'].sum()))
