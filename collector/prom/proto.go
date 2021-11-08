@@ -17,7 +17,9 @@ func (e *Endpoint) Address() string {
 }
 
 type Meta struct {
-	 TiKVInstanceCnt int `yaml:"tikv_instance_cnt"`
+	TiKVInstanceCnt int    `yaml:"tikv_instance_cnt"`
+	BeginTimestamp  string `yaml:"begin_timestamp"`
+	EndTimestamp    string `yaml:"end_timestamp"`
 }
 
 func (m *Meta) SaveFile(fileName string) error {
