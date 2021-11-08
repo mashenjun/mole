@@ -25,6 +25,16 @@ def load_yaml(file: str):
     return load(f1, Loader=Loader)  # 使用load方法加载
 
 
+# value should already normalized by the unit
+def format_value_with_unit(val: float, unit: str):
+    if unit == '':
+        return "{:.0f}".format(val) if val.is_integer() else "{:.3f}".format(val)
+    elif unit == '%':
+        return "{0:.2%}".format(val)
+    else:
+        return "{0:.0f}{1}".format(val, unit) if val.is_integer() else "{0:.3f}{1}".format(val, unit)
+
+
 # return a df containing feature scores.
 def cal_weighted_feature_score(f: pd.DataFrame, ff: dict):
     # distance_function control how to cal distance
@@ -41,7 +51,7 @@ def cal_weighted_feature_score(f: pd.DataFrame, ff: dict):
         weight = spec.get('weight', 1)
         distance_function = spec.get('distance_function', 'delta')
         upper_bound = spec.get('upper_bound', 1)
-        need_reverse = False
+        need_reverse = spec.get('need_reverse', False)
         if min_val > max_val:
             need_reverse = True
             min_val, max_val = max_val, min_val
@@ -58,8 +68,7 @@ def cal_weighted_feature_score(f: pd.DataFrame, ff: dict):
                 raise ValueError(metrics_name + " is not found in feature df")
         # retrieve feature metrics and consider the factor
         feature_value = f.loc[metrics_name][feature_name] * factor
-        if metrics_name == 'tikv_io_bytes:by_instance':
-            print("...")
+
         valid = f.loc[metrics_name]['length'] > 0
         if function == 'expit':
             gx_k = weighted_sigmoid.cal_k_for_gx(min_val, max_val)
@@ -70,7 +79,8 @@ def cal_weighted_feature_score(f: pd.DataFrame, ff: dict):
             feature_score = weighted_sigmoid.gx(gx_k, gx_m, feature_value_unit_ub)
             if need_reverse:
                 feature_score = 1 - feature_score
-            format_value = "{:.3f}".format(feature_value_unit) if unit == '' else ('{0:.2%}'.format(feature_value_unit) if unit == '%' else '{0:.3f}{1}'.format(feature_value_unit, unit))
+            format_value = format_value_with_unit(feature_value_unit, unit)
+            # format_value = "{:.3f}".format(feature_value_unit) if unit == '' else ('{0:.2%}'.format(feature_value_unit) if unit == '%' else '{0:.3f}{1}'.format(feature_value_unit, unit))
             if upper_bound > 1:
                 detail = "expit({},{},{}),{},{}".format(min_val, max_val, upper_bound, feature_name, distance_function)
             else:
@@ -83,12 +93,16 @@ def cal_weighted_feature_score(f: pd.DataFrame, ff: dict):
             # if mean_mean is zero, all instance has zero value on this metrics
             # thus set feature_score to zero directly
             feature_score = 0 if b == 0 else min((a - b) / b, 1)
-            format_value = "{0:.3f},{1:.3f}".format(a_unit, b_unit) if unit == '' else ("{0:.2%},{1:.2%}".format(a_unit, b_unit) if unit == '%' else "{0:.3f}{2},{1:.3f}{2}".format(a_unit, b_unit, unit))
+            format_value = "{0},{1}".format(format_value_with_unit(a_unit, unit), format_value_with_unit(b_unit, unit))
+            # format_value = "{0:.3f},{1:.3f}".format(a_unit, b_unit) if unit == '' else ("{0:.2%},{1:.2%}".format(a_unit, b_unit) if unit == '%' else "{0:.3f}{2},{1:.3f}{2}".format(a_unit, b_unit, unit))
             detail = "{},{}".format(function, distance_function)
         else:
             feature_value_unit = convert_unit_upper(feature_value, unit)
             feature_score = nrm_by_upper_bound(feature_value_unit, upper_bound)
-            format_value = "{:.3f}".format(feature_value_unit) if unit == '' else ("{:.2%}".format(feature_value_unit) if unit == '%' else "{:.3f}{}".format(feature_value_unit, unit))
+            if need_reverse:
+                feature_score = 1 - feature_score
+            format_value = format_value_with_unit(feature_value_unit, unit)
+            # format_value = "{:.3f}".format(feature_value_unit) if unit == '' else ("{:.2%}".format(feature_value_unit) if unit == '%' else "{:.3f}{}".format(feature_value_unit, unit))
             detail = "{},{},{}".format(function, feature_name, distance_function)
 
         format_value = '{0}(invalid)'.format(format_value) if valid == False else format_value

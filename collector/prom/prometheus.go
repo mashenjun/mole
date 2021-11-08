@@ -247,6 +247,8 @@ func (c *MetricsCollect) Collect(topo []Endpoint) error {
 			return err
 		}
 		meta.TiKVInstanceCnt = cnt
+		meta.BeginTimestamp = c.beginTime.Format(time.RFC3339)
+		meta.EndTimestamp = c.endTime.Format(time.RFC3339)
 		if err := meta.SaveFile(filepath.Join(
 			c.genDirPath(prom), "meta.yaml",
 		)); err != nil {
@@ -398,7 +400,7 @@ func (c *MetricsCollect) getInstanceCnt(prom Endpoint, job string) (int,error) {
 	u.Scheme = prom.Schema
 	q := u.Query()
 	q.Add("metric", "process_start_time_seconds")
-	q.Add("match_target", fmt.Sprintf(`{job="%+v"}`, job))
+	q.Add("match_target", fmt.Sprintf(`{job=~".*%+v$"}`, job))
 	u.RawQuery = q.Encode()
 	//u.Query().Add("match_target", "{job=\"tikv\"}")
 	resp, err := c.cli.Get(u.String())
