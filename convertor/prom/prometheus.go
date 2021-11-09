@@ -107,10 +107,9 @@ func (c *MetricsMatrixConvertor) Convert() error {
 
 	// read the source file line by line
 	// set the buffer since the MaxScanTokenSize = 64kb which is not large enough.
-
 	scanner := bufio.NewScanner(source)
 	if fInfo.Size() > bufio.MaxScanTokenSize {
-		scanner.Buffer(make([]byte, 4096), int(fInfo.Size()))
+		scanner.Buffer(make([]byte, 4096), int(fInfo.Size()+1))
 	}
 	for scanner.Scan() {
 		if err := c.process(scanner.Bytes()); err != nil {
@@ -302,14 +301,17 @@ func checkAlign(matrix model.Matrix) (bool, int, IGap) {
 	longest := len(matrix[0].Values)
 	gapStreamCnt := 0
 	for _, sp := range matrix {
-		if len(sp.Values) != longest {
-			gapStreamCnt++
-		}
 		startTs = mathutil.MinInt64(startTs, sp.Values[0].Timestamp.Unix())
 		endTs = mathutil.MaxInt64(endTs, sp.Values[len(sp.Values)-1].Timestamp.Unix())
 		longest = mathutil.Max(longest, len(sp.Values))
 	}
 	slotSize := tsToSlot(startTs, endTs, consts.MetricStep)+1
+	for _, sp := range matrix {
+		if len(sp.Values) < slotSize {
+			gapStreamCnt++
+		}
+	}
+
 	if gapStreamCnt == 0 && slotSize == longest {
 		return true, longest, noGap
 	}
