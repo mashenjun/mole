@@ -71,5 +71,5 @@ def visual_gxs(params: np.ndarray):
 
 
 if __name__ == "__main__":
-    params = np.array([[1,10],[1,100]])
+    params = np.array([[0.6,0.9],[1,10]])
     visual_gxs(params)
