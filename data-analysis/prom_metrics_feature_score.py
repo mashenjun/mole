@@ -12,7 +12,19 @@ import re
 
 print_columns = ["weight", "score", "name"]
 verbose_columns = ["weight", "score", "value", "detail", "name"]
-score_table_cols = ['name', 'score', 'weight', 'distance_function', 'value', 'detail', 'valid']
+score_table_cols = ['name', 'score', 'weight', 'distance_function', 'value', 'detail', 'valid', 'skip_sort']
+
+class color:
+   PURPLE = '\033[95m'
+   CYAN = '\033[96m'
+   DARKCYAN = '\033[36m'
+   BLUE = '\033[94m'
+   GREEN = '\033[92m'
+   YELLOW = '\033[93m'
+   RED = '\033[91m'
+   BOLD = '\033[1m'
+   UNDERLINE = '\033[4m'
+   END = '\033[0m'
 
 
 def load_feature(file: str):
@@ -25,14 +37,55 @@ def load_yaml(file: str):
     return load(f1, Loader=Loader)  # 使用load方法加载
 
 
+def can_be_int(num):
+    if isinstance(num, int):
+        return True
+    if isinstance(num, float):
+        return num.is_integer()
+    return False
+
+
+def clear_tailing_decimal(val):
+    if can_be_int(val):
+        return "{:.0f}".format(val)
+    if can_be_int(val*10):
+        return "{:.1f}".format(val)
+    if can_be_int(val*100):
+        return "{:.2f}".format(val)
+    return "{:.3f}".format(val)
+
+
 # value should already normalized by the unit
-def format_value_with_unit(val: float, unit: str):
+def format_value_with_unit(val, unit: str):
     if unit == '':
-        return "{:.0f}".format(val) if val.is_integer() else "{:.3f}".format(val)
+        return "{0}".format(clear_tailing_decimal(val))
     elif unit == '%':
+        if can_be_int(val*100):
+            return "{0:.0%}".format(val)
+        if can_be_int(val*1000):
+            return "{0:.1%}".format(val)
         return "{0:.2%}".format(val)
     else:
-        return "{0:.0f}{1}".format(val, unit) if val.is_integer() else "{0:.3f}{1}".format(val, unit)
+        return "{0}{1}".format(clear_tailing_decimal(val), unit)
+
+
+def cal_score_factor(feature_table: pd.DataFrame, spec: dict):
+    if 'score_factor' not in spec:
+        return 0.0, False
+
+    if 'percentage' in spec['score_factor']:
+        pct = spec['score_factor']['percentage']
+        a, b = 0.0, 0.0
+        for name in pct["numerator"]:
+            words = name.split("@")
+            a += feature_table.loc[words[0]][words[1]]
+        for name in pct["denominator"]:
+            words = name.split("@")
+            b += feature_table.loc[words[0]][words[1]]
+        if b == 0.0:
+            return 1.0, True
+        return a/b, True
+    return 0.0, False
 
 
 # return a df containing feature scores.
@@ -51,9 +104,12 @@ def cal_weighted_feature_score(f: pd.DataFrame, ff: dict):
         weight = spec.get('weight', 1)
         distance_function = spec.get('distance_function', 'delta')
         upper_bound = spec.get('upper_bound', 1)
-        need_reverse = spec.get('need_reverse', False)
+        value_reverse = spec.get('value_reverse', False)
+        skip_sort = spec.get('skip_sort', False)
+        score_factor, has_score_factor = cal_score_factor(f, spec)
+        score_reverse = False
         if min_val > max_val:
-            need_reverse = True
+            score_reverse = True
             min_val, max_val = max_val, min_val
         # check if metrics name exist, with regex match logic
         if metrics_name not in list(f.index):
@@ -68,23 +124,30 @@ def cal_weighted_feature_score(f: pd.DataFrame, ff: dict):
                 raise ValueError(metrics_name + " is not found in feature df")
         # retrieve feature metrics and consider the factor
         feature_value = f.loc[metrics_name][feature_name] * factor
-
         valid = f.loc[metrics_name]['length'] > 0
         if function == 'expit':
             gx_k = weighted_sigmoid.cal_k_for_gx(min_val, max_val)
-            gx_m = (min_val - max_val) / 2
+            gx_m = -(min_val + max_val) / 2
             # consider the unit factor and upper bound
             feature_value_unit = convert_unit_upper(feature_value, unit)
             feature_value_unit_ub = nrm_by_upper_bound(feature_value_unit, upper_bound)
             feature_score = weighted_sigmoid.gx(gx_k, gx_m, feature_value_unit_ub)
-            if need_reverse:
+            if metrics_name == "tidb_cpu_usage:by_instance":
+                print(feature_value_unit)
+            if score_reverse:
                 feature_score = 1 - feature_score
             format_value = format_value_with_unit(feature_value_unit, unit)
-            # format_value = "{:.3f}".format(feature_value_unit) if unit == '' else ('{0:.2%}'.format(feature_value_unit) if unit == '%' else '{0:.3f}{1}'.format(feature_value_unit, unit))
+            if has_score_factor:
+                feature_score = feature_score * score_factor
+                format_value = "{}*{}".format(format_value, format_value_with_unit(score_factor, ''))
             if upper_bound > 1:
-                detail = "expit({},{},{}),{},{}".format(min_val, max_val, upper_bound, feature_name, distance_function)
+                detail = "expit({},{},{}),{},{}".format(format_value_with_unit(spec.get('min', 0), unit),
+                                                        format_value_with_unit(spec.get('max', 0), unit),
+                                                        upper_bound, feature_name, distance_function)
             else:
-                detail = "expit({},{}),{},{}".format(min_val, max_val, feature_name, distance_function)
+                detail = "expit({},{}),{},{}".format(format_value_with_unit(spec.get('min', 0), unit),
+                                                     format_value_with_unit(spec.get('max', 0), unit),
+                                                     feature_name, distance_function)
         elif function == 'balance':
             a_unit = convert_unit_upper(f.loc[metrics_name]['maximum_mean'], unit)
             b_unit = convert_unit_upper(f.loc[metrics_name]['mean_mean'], unit)
@@ -94,19 +157,23 @@ def cal_weighted_feature_score(f: pd.DataFrame, ff: dict):
             # thus set feature_score to zero directly
             feature_score = 0 if b == 0 else min((a - b) / b, 1)
             format_value = "{0},{1}".format(format_value_with_unit(a_unit, unit), format_value_with_unit(b_unit, unit))
-            # format_value = "{0:.3f},{1:.3f}".format(a_unit, b_unit) if unit == '' else ("{0:.2%},{1:.2%}".format(a_unit, b_unit) if unit == '%' else "{0:.3f}{2},{1:.3f}{2}".format(a_unit, b_unit, unit))
+            if has_score_factor:
+                feature_score = feature_score * score_factor
+                format_value = "{}*{}".format(format_value, format_value_with_unit(score_factor, ''))
             detail = "{},{}".format(function, distance_function)
         else:
+            if value_reverse:
+                feature_value = 1 - feature_value
             feature_value_unit = convert_unit_upper(feature_value, unit)
             feature_score = nrm_by_upper_bound(feature_value_unit, upper_bound)
-            if need_reverse:
-                feature_score = 1 - feature_score
             format_value = format_value_with_unit(feature_value_unit, unit)
-            # format_value = "{:.3f}".format(feature_value_unit) if unit == '' else ("{:.2%}".format(feature_value_unit) if unit == '%' else "{:.3f}{}".format(feature_value_unit, unit))
+            if has_score_factor:
+                feature_score = feature_score * score_factor
+                format_value = "{}*{}".format(format_value, format_value_with_unit(score_factor, ''))
             detail = "{},{},{}".format(function, feature_name, distance_function)
 
-        format_value = '{0}(invalid)'.format(format_value) if valid == False else format_value
-        data = pd.DataFrame([[name, feature_score, weight, distance_function, format_value, detail, valid]], columns=score_table_cols)
+        format_value = '{0}(invalid)'.format(format_value) if valid is False else format_value
+        data = pd.DataFrame([[name, feature_score, weight, distance_function, format_value, detail, valid, skip_sort]], columns=score_table_cols)
         score_table = score_table.append(data, ignore_index=True)
     return score_table
 
@@ -138,8 +205,8 @@ def nrm_by_upper_bound(val: float, upper_bound: float):
     return result
 
 
-def cal_key(s: pd.Series):
-    return s.apply(lambda x: x if x > 1 else 1-x)
+def cal_key(s):
+    return s.apply(lambda x: 1+x['score'] if x['skip_sort'] else x)
 
 
 if __name__ == "__main__":
@@ -189,7 +256,9 @@ if __name__ == "__main__":
     if args.output is not None:
         score_table.to_csv(args.output, sep=',', index=False)
     # polish the score_table to get a more viewable result
-    score_table.sort_values(by='score', ascending=True, ignore_index=True, inplace=True, key=cal_key)
+    score_table['val_to_sort'] = score_table.apply(lambda x: 0 - x['score'] if x['skip_sort'] is True else x['score'], axis=1)
+    score_table.sort_values(by='val_to_sort', ascending=False, ignore_index=True, inplace=True)
+    score_table['name'] = score_table.apply(lambda x: color.UNDERLINE + x['name'] + color.END if x['skip_sort'] is True else x['name'], axis=1)
     if verbose:
         print(tabulate.tabulate(score_table[verbose_columns], headers=verbose_columns, floatfmt=".3f"))
     else:
