@@ -2,7 +2,7 @@
 feature_functions:
 # 静态特征
 # 数据总量
-  - name: '集群存储数据总量'
+  - name: 'TiKV 集群存储数据总量'
     metrics_name: 'tikv_engine_size_bytes:per_instance:agg_val' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'expit' # expit is a weighted sigmoid function
     min: 1.5
@@ -17,14 +17,14 @@ feature_functions:
     max: 6.0
     unit: 'TB'
     weight: 2
-  - name: 'Region 总量'
+  - name: 'TiKV 集群 Region 总量'
     metrics_name: 'tikv_raftstore_region_count:avg_type:region' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'expit' # expit is a weighted sigmoid function
     min: 9000
     max: 9000000
     factor: *tikvcnt
     weight: 4
-  - name: 'Leader 总量'
+  - name: 'TiKV 集群 Leader 总量'
     metrics_name: 'tikv_raftstore_region_count:avg_type:leader' # metrics_name is used to locate the row in feature.csv or feature df.
     function: 'expit' # expit is a weighted sigmoid function
     min: 3000
@@ -138,7 +138,7 @@ feature_functions:
     max: 32
     unit: 'GB'
     weight: 4
-  - name: '集群每 TiKV pending bytes：KVDB'
+  - name: '每 TiKV pending bytes：KVDB'
     metrics_name: 'tikv_engine_pending_compaction_bytes:sum_db_instance:filter_kv' # metrics_name is used to locate the row in feature.csv or feature df.
     feature_name: 'mean_sum_div_cnt'
     cal_summary: true
@@ -147,7 +147,7 @@ feature_functions:
     max: 32
     unit: 'GB'
     weight: 4
-  - name: '集群每 TiKV pending bytes：KVDB MAX'
+  - name: '每 TiKV pending bytes：KVDB MAX'
     metrics_name: 'tikv_engine_pending_compaction_bytes:sum_db_instance:filter_kv' # metrics_name is used to locate the row in feature.csv or feature df.
     feature_name: 'maximum_sum_div_cnt'
     cal_summary: true
@@ -156,7 +156,7 @@ feature_functions:
     max: 32
     unit: 'GB'
     weight: 4
-  - name: '每 TiKV key 平均大小：default CF'
+  - name: '每 TiKV 平均 key 大小：default CF'
     metrics_name: 'tikv_engine_key_size:per_instance:kv_default'
     feature_name: 'mean_mean'
     cal_summary: true
@@ -165,7 +165,7 @@ feature_functions:
     max: 25600
     unit: 'B'
     weight: 2
-  - name: '每 TiKV key 平均大小：default CF MAX'
+  - name: '每 TiKV 平均 key 大小：default CF MAX'
     metrics_name: 'tikv_engine_key_size:per_instance:kv_default'
     feature_name: 'maximum_mean'
     cal_summary: true
@@ -174,7 +174,7 @@ feature_functions:
     max: 25600
     unit: 'B'
     weight: 2
-  - name: '每 TiKV key 平均大小：write CF'
+  - name: '每 TiKV 平均 key 大小：write CF'
     metrics_name: 'tikv_engine_key_size:per_instance:kv_write'
     feature_name: 'mean_mean'
     cal_summary: true
@@ -183,7 +183,7 @@ feature_functions:
     max: 25600
     unit: 'B'
     weight: 2
-  - name: '每 TiKV key 平均大小：write CF MAX'
+  - name: '每 TiKV 平均 key 大小：write CF MAX'
     metrics_name: 'tikv_engine_key_size:per_instance:kv_write'
     feature_name: 'maximum_mean'
     cal_summary: true
@@ -192,7 +192,7 @@ feature_functions:
     max: 25600
     unit: 'B'
     weight: 2
-  - name: '集群每 TiKV 平均 key 数量：lock CF'
+  - name: '每 TiKV 平均 key 数量：lock CF'
     metrics_name: 'tikv_engine_estimate_num_keys:filter_lock'
     feature_name: 'mean_mean'
     cal_summary: true
@@ -520,7 +520,7 @@ feature_functions:
     weight: 4
     skip_sort: true
 # 集群总体资源消耗
-  - name: '平均每 TiDB CPU 消耗'
+  - name: '每 TiDB 平均 CPU 消耗'
     metrics_name: 'tidb_cpu_usage:by_instance'
     feature_name: 'mean_mean'
     cal_summary: true
@@ -530,7 +530,7 @@ feature_functions:
     distance_function: 'delta'
     unit: '%'
     weight: 4
-  - name: '平均每 TiKV CPU 消耗'
+  - name: '每 TiKV 平均 CPU 消耗'
     metrics_name: 'tikv_cpu_usage:by_instance'
     feature_name: 'mean_mean'
     cal_summary: true
@@ -540,7 +540,7 @@ feature_functions:
     distance_function: 'delta'
     unit: '%'
     weight: 4
-  - name: '平均每 TiKV 磁盘流量'
+  - name: '每 TiKV 平均磁盘流量'
     metrics_name: 'tikv_io_bytes:by_instance'
     feature_name: 'mean_mean'
     cal_summary: true
