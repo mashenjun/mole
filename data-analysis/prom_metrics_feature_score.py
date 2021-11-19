@@ -132,8 +132,6 @@ def cal_weighted_feature_score(f: pd.DataFrame, ff: dict):
             feature_value_unit = convert_unit_upper(feature_value, unit)
             feature_value_unit_ub = nrm_by_upper_bound(feature_value_unit, upper_bound)
             feature_score = weighted_sigmoid.gx(gx_k, gx_m, feature_value_unit_ub)
-            if metrics_name == "tidb_cpu_usage:by_instance":
-                print(feature_value_unit)
             if score_reverse:
                 feature_score = 1 - feature_score
             format_value = format_value_with_unit(feature_value_unit, unit)
