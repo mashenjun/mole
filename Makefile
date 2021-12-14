@@ -17,34 +17,47 @@ TEST_LDFLAGS        := ""
 PACKAGE_LIST        := go list ./...| grep -vE "cmd"
 PACKAGES            := $$($(PACKAGE_LIST))
 
-# Targets
-.PHONY: cli cli_linux test
-
 CURDIR := $(shell pwd)
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
+PACK_LINUX_DIR := $(PROJECT_DIR)/bin/mole
 export PATH := $(CURDIR)/bin/:$(PATH)
+
+
+# Targets
+.PHONY: cli cli_linux test pack-linux
 
 # run starts the server with dev config
 
 cli: lint
 	$(GOBUILD) -o bin/mole ./cmd
 
-cli_linux: lint
+cli-linux: lint
 	GOOS=linux GOARCH=amd64 $(GOBUILD) -o bin/linux/mole ./cmd
 
 test:
 	$(GOTEST) ./...
 
-## Run golangci-lint linter
+# pack mole binary, python script and related yaml config into a tar package.
+pack-linux: cli-linux
+	@echo pack dir is $(PACK_LINUX_DIR)
+	@mkdir -p $(PACK_LINUX_DIR)/config
+	@cp bin/linux/mole $(PACK_LINUX_DIR)
+	@cp example/*.yaml $(PACK_LINUX_DIR)/config/
+	@cp data-analysis/example/*.yaml $(PACK_LINUX_DIR)/config/
+	@cp data-analysis/{prom_metrics_feature_score.py,prom_metrics_feature_score_distance.py} $(PACK_LINUX_DIR)
+	@cp data-analysis/heatmap_feature_distance.py $(PACK_LINUX_DIR)
+	@tar -czf bin/mole.linux-amd64.tar.gz -C bin mole
+
+# Run golangci-lint linter
 lint: golangci-lint
 	$(GOLANGCI_LINT) --timeout 5m0s run ./...
 
-## Run golangci-lint linter and perform fixes
+# Run golangci-lint linter and perform fixes
 lint-fix: golangci-lint
 	$(GOLANGCI_LINT) run --fix ./...
 
 GOLANGCI_LINT = $(shell pwd)/bin/golangci-lint
-golangci-lint: ## Download golangci-lint locally if necessary
+golangci-lint: # Download golangci-lint locally if necessary
 	$(call go-get-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint@v1.41.1)
 
 # go-get-tool will 'go get' any package $2 and install it to $1.
