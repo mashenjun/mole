@@ -298,7 +298,15 @@ func (c *MetricsCollect) Collect(topo []Endpoint) error {
 }
 
 func (c *MetricsCollect) getMetricList(prom string) ([]string, error) {
-	if len(c.rawMetrics) > 0 {
+
+	if len(c.rawMetrics) == 0 {
+		return c.rawMetrics, nil
+	}
+	fillMetricsName := false
+	if len(c.rawMetrics) == 1 && c.rawMetrics[0] == "*" {
+		fillMetricsName = true
+	}
+	if !fillMetricsName {
 		return c.rawMetrics, nil
 	}
 	resp, err := c.cli.Get(fmt.Sprintf("%s/api/v1/label/__name__/values", prom))
@@ -391,7 +399,7 @@ func (c *MetricsCollect) collectMetric(prom Endpoint, ts []string, mtc string, e
 	return nil
 }
 
-func (c *MetricsCollect) getInstanceCnt(prom Endpoint, job string) (int,error) {
+func (c *MetricsCollect) getInstanceCnt(prom Endpoint, job string) (int, error) {
 	u, err := url.Parse("/api/v1/targets/metadata")
 	if err != nil {
 		return 0, err
@@ -413,10 +421,10 @@ func (c *MetricsCollect) getInstanceCnt(prom Endpoint, job string) (int,error) {
 		return 0, errors.New(resp.Status)
 	}
 	data := struct {
-		Data []struct{
-			Target struct{
+		Data []struct {
+			Target struct {
 				Instance string `json:"instance"`
-				Job string `json:"job"`
+				Job      string `json:"job"`
 			} `json:"target"`
 		} `json:"data"`
 	}{}
