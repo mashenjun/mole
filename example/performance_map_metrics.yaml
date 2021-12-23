@@ -78,7 +78,7 @@ cooked:
   - record: tikv_block_cache_hit_ratio:filter
     expr: 'sum(rate(tikv_engine_cache_efficiency{db="kv",type="block_cache_filter_hit"}[1m]))/sum(rate(tikv_engine_cache_efficiency{db="kv",type=~"block_cache_filter_hit|block_cache_filter_miss"}[1m]))'
   - record: tikv_block_cache_hit_ratio:index
-    expr: 'sum(rate(tikv_engine_cache_efficiency{db="kv",type="block_cache_index_hit"}[1m]))/sum(rate(tikv_engine_cache_efficiency{db="kv",type="block_cache_index_hit|block_cache_index_miss"}[1m]))'
+    expr: 'sum(rate(tikv_engine_cache_efficiency{db="kv",type="block_cache_index_hit"}[1m]))/sum(rate(tikv_engine_cache_efficiency{db="kv",type=~"block_cache_index_hit|block_cache_index_miss"}[1m]))'
   - record: tikv_bloom_prefix_hit_ratio
     expr: 'sum(rate(tikv_engine_bloom_efficiency{db="kv",type="bloom_prefix_useful"}[1m]))/ sum(rate(tikv_engine_bloom_efficiency{db="kv",type="bloom_prefix_checked"}[1m]))'
 # Disk panel Read & Write
@@ -138,7 +138,7 @@ cooked:
     expr: 'sum(rate(tikv_thread_cpu_seconds_total{name=~"apply_[0-9]+"}[1m]))by(instance)'
 # Disk panel Write
   - record: node_disk_write_lat:by_instance:by_device 
-    expr: 'irate(node_disk_writes_time_seconds_total[5m])/irate(node_disk_writes_completed_total[5m])'
+    expr: 'irate(node_disk_write_time_seconds_total[5m])/irate(node_disk_writes_completed_total[5m])'
   - record: node_disk_write_ops:by_instance:by_device 
     expr: 'irate(node_disk_writes_completed_total[5m])'
   - record: node_disk_write_bw:by_instance:by_device
