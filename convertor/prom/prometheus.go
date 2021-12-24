@@ -305,7 +305,7 @@ func checkAlign(matrix model.Matrix) (bool, int, IGap) {
 		endTs = mathutil.MaxInt64(endTs, sp.Values[len(sp.Values)-1].Timestamp.Unix())
 		longest = mathutil.Max(longest, len(sp.Values))
 	}
-	slotSize := tsToSlot(startTs, endTs, consts.MetricStep)+1
+	slotSize := tsToSlot(startTs, endTs, consts.MetricStep) + 1
 	for _, sp := range matrix {
 		if len(sp.Values) < slotSize {
 			gapStreamCnt++
@@ -332,22 +332,19 @@ func checkAlign(matrix model.Matrix) (bool, int, IGap) {
 // the header is the same order as the label order in the json file.
 // if the metrics does not have any label, use default value `agg_val`
 func (c *MetricsMatrixConvertor) extractHeader(matrix model.Matrix) []string {
-	labelNames := make(model.LabelNames, 0)
 	header := []string{"timestamp"}
-	for i, sp := range matrix {
-		if i == 0 {
-			// collect and sort label name first
-			for lname := range sp.Metric {
-				if string(lname) == "__name__" || string(lname) == "job" {
-					continue
-				}
-				labelNames = append(labelNames, lname)
-			}
-			sort.Sort(labelNames)
-		}
+	for _, sp := range matrix {
 		if !c.matchLabels(model.LabelSet(sp.Metric)) {
 			continue
 		}
+		labelNames := make(model.LabelNames, 0)
+		for lname := range sp.Metric {
+			if string(lname) == "__name__" || string(lname) == "job" {
+				continue
+			}
+			labelNames = append(labelNames, lname)
+		}
+		sort.Sort(labelNames)
 		if len(labelNames) == 0 {
 			header = append(header, "agg_val")
 		} else {

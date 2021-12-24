@@ -12,7 +12,7 @@ rules:
   - record: tidb_p999_kv_cmd_rt:get:by_type
   - record: tidb_p99_kv_cmd_rt:get:by_type
   - record: tidb_lock_resolve_ops:by_type
-  - record: tibd_p99_backoff_dur:by_type
+  - record: tidb_p99_backoff_dur:by_type
   - record: tidb_backoff_ops:by_type
   - record: pd_p999_cmd_wait_dur:tso
   - record: pd_p999_rpc_dur:tso
