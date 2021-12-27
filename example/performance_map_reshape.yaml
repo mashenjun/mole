@@ -46,7 +46,7 @@ rules:
   - record: tikv_avg_sched_latch_wait_dur:by_type
   - record: tikv_sched_thd_cpu_usage:by_instance
   - record: tikv_p99_sched_cmd_dur:by_type
-  - record: tikv_raftstore_req_wait_dur:by_instance
+  - record: tikv_p99_raftstore_req_wait_dur:by_instance
   - record: tikv_raftstore_thd_cpu_usage:by_instance
   - record: tikv_p99_raftstore_async_req_dur
   - record: tikv_avg_raftstore_async_req_dur
