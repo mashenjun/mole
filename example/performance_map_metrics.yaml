@@ -80,10 +80,10 @@ cooked:
   - record: tikv_block_cache_hit_ratio:index
     expr: 'sum(rate(tikv_engine_cache_efficiency{db="kv",type="block_cache_index_hit"}[1m]))/sum(rate(tikv_engine_cache_efficiency{db="kv",type=~"block_cache_index_hit|block_cache_index_miss"}[1m]))'
   - record: tikv_bloom_prefix_hit_ratio
-    expr: 'sum(rate(tikv_engine_bloom_efficiency{db="kv",type="bloom_prefix_useful"}[1m]))/ sum(rate(tikv_engine_bloom_efficiency{db="kv",type="bloom_prefix_checked"}[1m]))'
+    expr: 'sum(rate(tikv_engine_bloom_efficiency{db="kv",type="bloom_prefix_useful"}[1m]))/sum(rate(tikv_engine_bloom_efficiency{db="kv",type="bloom_prefix_checked"}[1m]))'
 # Disk panel Read & Write
   - record: node_disk_read_lat:by_instance:by_device
-    expr: 'irate(node_disk_read_time_seconds_total[5m])/irate(node_disk_reads_completed_total[5m])'
+    expr: 'irate(node_disk_read_time_seconds_total[5m])/irate(node_disk_reads_completed_total[5m])>0'
   - record: node_disk_read_ops:by_instance:by_device
     expr: 'irate(node_disk_reads_completed_total[5m])'
   - record: node_disk_read_bw:by_instance:by_device
@@ -102,14 +102,14 @@ cooked:
   - record: tikv_p95_sched_latch_wait_dur:by_type
     expr: 'histogram_quantile(0.95,sum(rate(tikv_scheduler_latch_wait_duration_seconds_bucket{type!=""}[5m]))by(le,type))>0'
   - record: tikv_avg_sched_latch_wait_dur:by_type
-    expr: 'rate(tikv_scheduler_latch_wait_duration_seconds_sum[5m])/rate(tikv_scheduler_latch_wait_duration_seconds_count[5m])'
+    expr: 'rate(tikv_scheduler_latch_wait_duration_seconds_sum[5m])/rate(tikv_scheduler_latch_wait_duration_seconds_count[5m])>0'
   - record: tikv_sched_thd_cpu_usage:by_instance
     expr: 'sum(rate(tikv_thread_cpu_seconds_total{name=~"sched_.*"}[1m]))by(instance)'
   - record: tikv_p99_sched_cmd_dur:by_type
     expr: 'histogram_quantile(0.99,sum(rate(tikv_scheduler_command_duration_seconds_bucket{type!=""}[1m]))by(le,type))>0'
 # raftstore panel Write
-  - record: tikv_raftstore_req_wait_dur:by_instance
-    expr: 'histogram_quantile(0.99,sum(rate(tikv_raftstore_request_wait_time_duration_secs_bucket[1m]))by(le,instance))'
+  - record: tikv_p99_raftstore_req_wait_dur:by_instance
+    expr: 'histogram_quantile(0.99,sum(rate(tikv_raftstore_request_wait_time_duration_secs_bucket[1m]))by(le,instance))>0'
   - record: tikv_raftstore_thd_cpu_usage:by_instance
     expr: 'sum(rate(tikv_thread_cpu_seconds_total{name=~"raftstore_.*"}[1m]))by(instance)'
   - record: tikv_p99_raftstore_async_req_dur
@@ -138,7 +138,7 @@ cooked:
     expr: 'sum(rate(tikv_thread_cpu_seconds_total{name=~"apply_[0-9]+"}[1m]))by(instance)'
 # Disk panel Write
   - record: node_disk_write_lat:by_instance:by_device
-    expr: 'irate(node_disk_write_time_seconds_total[5m])/irate(node_disk_writes_completed_total[5m])'
+    expr: 'irate(node_disk_write_time_seconds_total[5m])/irate(node_disk_writes_completed_total[5m])>0'
   - record: node_disk_write_ops:by_instance:by_device
     expr: 'irate(node_disk_writes_completed_total[5m])'
   - record: node_disk_write_bw:by_instance:by_device
