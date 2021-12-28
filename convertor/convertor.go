@@ -1,8 +1,11 @@
 package convertor
 
-import "github.com/mashenjun/mole/proto"
+import (
+	"context"
+	"github.com/mashenjun/mole/proto"
+)
 
 type IConvert interface {
-	Convert() error
+	Convert(context.Context) error
 	GetSink() <-chan *proto.CSVMsg
 }

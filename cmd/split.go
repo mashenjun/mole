@@ -16,9 +16,9 @@ func splitCmd() *cobra.Command {
 	var (
 		inputDir  = ""
 		outputDir = ""
-		begin  = ""
-		end    = ""
-		filters = make([]string, 0)
+		begin     = ""
+		end       = ""
+		filters   = make([]string, 0)
 	)
 	cmd := &cobra.Command{
 		Use:   `split`,
@@ -39,7 +39,7 @@ func splitCmd() *cobra.Command {
 			}
 			errG, ctx := errgroup.WithContext(context.Background())
 
-			for  _, d := range ds {
+			for _, d := range ds {
 				if d.IsDir() {
 					continue
 				}
@@ -64,7 +64,7 @@ func splitCmd() *cobra.Command {
 				}
 				//errG, ctx := errgroup.WithContext(context.Background())
 				errG.Go(func() error {
-					return hc.Convert()
+					return hc.Convert(ctx)
 				})
 				errG.Go(func() error {
 					return d.Start(ctx)
