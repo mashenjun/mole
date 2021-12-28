@@ -40,9 +40,9 @@ func TestTsToSlot(t *testing.T) {
 	input := tsHasGap
 	output := make([]int, len(input))
 	for i, ts := range input {
-		output[i] =  tsToSlot(startTs, ts, consts.MetricStep)
+		output[i] = tsToSlot(startTs, ts, consts.MetricStep)
 	}
-	if output[len(output)-1] - output[0] == len(output) -1 {
+	if output[len(output)-1]-output[0] == len(output)-1 {
 		t.Fatal("handle gap incorrectly")
 	}
 	if output[0] != 360 {
@@ -51,7 +51,7 @@ func TestTsToSlot(t *testing.T) {
 }
 
 func TestMergedGap(t *testing.T) {
-	builder := NewMergedGapBuilder(2, 1631066400, consts.MetricStep, 480)
+	builder := NewMergedGapBuilder(2, 1631066400, consts.MetricStep, 480, 2)
 	streamHasGap := make([]model.SamplePair, len(tsHasGap))
 	for i, ts := range tsHasGap {
 		streamHasGap[i] = model.SamplePair{
@@ -70,13 +70,13 @@ func TestMergedGap(t *testing.T) {
 	builder.Push("no_gap", streamNoGap)
 	mg := builder.Build()
 	slot0 := tsToSlot(1631066400, 1631073015, 15)
-	slot1 :=  tsToSlot(1631066400, 1631071845, 15)
+	slot1 := tsToSlot(1631066400, 1631071845, 15)
 	slot3 := tsToSlot(1631066400, 1631073585, 15)
 	slot4 := tsToSlot(1631066400, 1631071800, 15)
-	if mg.InGap(slot0) {
+	if mg.InAnyGap(slot0) {
 		t.Fatalf("%v should not in gap", slot0)
 	}
-	if !mg.InGap(slot1) {
+	if !mg.InAnyGap(slot1) {
 		t.Fatalf("%v should in gap", slot1)
 	}
 	if mg.GetAlignedIdx("has_gap", slot4) != 0 {
@@ -94,25 +94,25 @@ func TestMergedGap(t *testing.T) {
 }
 
 func TestMergedGapOverlap(t *testing.T) {
-	startTs , endTs := int64(1632525600), int64(1632526185)
+	startTs, endTs := int64(1632525600), int64(1632526185)
 	tsList := make([][]int64, 4)
 	sp := make([][]model.SamplePair, 4)
-	tsList[0] = []int64{1632525600,1632525615,1632525630,1632525645,1632525660,1632525675,1632525690,1632525705,1632525720,
-		1632525735,1632525750,1632526005,1632526020,1632526035,1632526050,1632526065,1632526080,1632526095,1632526110,
-		1632526125,1632526140,1632526155,1632526170,1632526185}
-	tsList[1] = []int64{1632525600,1632525615,1632525630,1632525645,1632525660,1632525675,1632525690,1632525705,1632525720,
-		1632525735,1632525750,1632525765,1632526005,1632526020,1632526035,1632526050,1632526065,1632526080,1632526095,
-		1632526110,1632526125,1632526140,1632526155,1632526170,1632526185}
-	tsList[2] = []int64{1632525600,1632525615,1632525630,1632525645,1632525660,1632525675,1632525690,1632525705,1632525720,
-		1632525735,1632525750,1632526005,1632526020,1632526035,1632526050,1632526065,1632526080,1632526095,1632526110,
-		1632526125,1632526140,1632526155,1632526170,1632526185}
-	tsList[3] = []int64{1632525600,1632525615,1632525630,1632525645,1632525660,1632525675,1632525690,1632525705,1632525720,
-		1632525735,1632525750,1632525765}
+	tsList[0] = []int64{1632525600, 1632525615, 1632525630, 1632525645, 1632525660, 1632525675, 1632525690, 1632525705, 1632525720,
+		1632525735, 1632525750, 1632526005, 1632526020, 1632526035, 1632526050, 1632526065, 1632526080, 1632526095, 1632526110,
+		1632526125, 1632526140, 1632526155, 1632526170, 1632526185}
+	tsList[1] = []int64{1632525600, 1632525615, 1632525630, 1632525645, 1632525660, 1632525675, 1632525690, 1632525705, 1632525720,
+		1632525735, 1632525750, 1632525765, 1632526005, 1632526020, 1632526035, 1632526050, 1632526065, 1632526080, 1632526095,
+		1632526110, 1632526125, 1632526140, 1632526155, 1632526170, 1632526185}
+	tsList[2] = []int64{1632525600, 1632525615, 1632525630, 1632525645, 1632525660, 1632525675, 1632525690, 1632525705, 1632525720,
+		1632525735, 1632525750, 1632526005, 1632526020, 1632526035, 1632526050, 1632526065, 1632526080, 1632526095, 1632526110,
+		1632526125, 1632526140, 1632526155, 1632526170, 1632526185}
+	tsList[3] = []int64{1632525600, 1632525615, 1632525630, 1632525645, 1632525660, 1632525675, 1632525690, 1632525705, 1632525720,
+		1632525735, 1632525750, 1632525765}
 
 	for i, ts := range tsList {
 		pair := make([]model.SamplePair, len(ts))
-		for j, v := range ts  {
-			pair [j] = model.SamplePair{
+		for j, v := range ts {
+			pair[j] = model.SamplePair{
 				Timestamp: model.TimeFromUnix(v),
 				Value:     1,
 			}
@@ -120,7 +120,7 @@ func TestMergedGapOverlap(t *testing.T) {
 		sp[i] = pair
 	}
 	size := tsToSlot(startTs, endTs, 15) + 1
-	builder := NewMergedGapBuilder(4, 1632525600, consts.MetricStep, size)
+	builder := NewMergedGapBuilder(4, 1632525600, consts.MetricStep, size, 5)
 	for i, v := range sp {
 		builder.Push(strconv.Itoa(i), v)
 	}
@@ -133,10 +133,10 @@ func TestMergedGapOverlap(t *testing.T) {
 	if missCnt != 14 {
 		t.Fatal("wrong")
 	}
-	if gap.InGap(0) {
+	if gap.InAnyGap(0) {
 		t.Fatal("wrong")
 	}
-	if !gap.InGap(20) {
+	if !gap.InAnyGap(20) {
 		t.Fatal("wrong")
 	}
 }

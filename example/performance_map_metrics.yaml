@@ -11,12 +11,12 @@ cooked:
   - record: tidb_heap_size:by_instance
     expr: 'go_memstats_heap_inuse_bytes{job=~".*tidb"}'
 # Parse panel Read & Write
-  - record: tidb_p99_prase_dur:by_sql_type
+  - record: tidb_p99_parse_dur:by_sql_type
     expr: 'histogram_quantile(0.99,sum(rate(tidb_session_parse_duration_seconds_bucket{sql_type!=""}[1m]))by(le,sql_type))>0'
 # Compile panel Read & Write
   - record: tidb_p99_compile_dur:by_sql_type
     expr: 'histogram_quantile(0.99,sum(rate(tidb_session_compile_duration_seconds_bucket{sql_type!=""}[1m]))by(le,sql_type))>0'
-# Transcation panel Read & Write
+# Transaction panel Read & Write
   - record: tidb_p99_txn_dur:by_sql_type
     expr: 'histogram_quantile(0.99,sum(rate(tidb_session_transaction_duration_seconds_bucket{sql_type!=""}[1m]))by(le,sql_type))>0'
   - record: tidb_p99_txn_stmt_cnt:by_sql_type
@@ -34,7 +34,7 @@ cooked:
     expr: 'histogram_quantile(0.99,sum(rate(tidb_tikvclient_backoff_seconds_bucket{type!=""}[5m]))by(le,type))>0'
   - record: tidb_backoff_ops:by_type
     expr: 'sum(rate(tidb_tikvclient_backoff_seconds_count[1m]))by(type)'
-# PD Clinet panel Read & Write
+# PD Client panel Read & Write
   - record: pd_p999_cmd_wait_dur:tso
     expr: 'histogram_quantile(0.999,sum(rate(pd_client_cmd_handle_cmds_duration_seconds_bucket{type="tso"}[1m]))by(le))'
   - record: pd_p999_rpc_dur:tso
@@ -64,7 +64,7 @@ cooked:
   - record: tikv_get_cache_hit:block_cache
     expr: 'sum(rate(tikv_engine_cache_efficiency{db="kv",type=~"block_cache_data_hit|block_cache_filter_hit"}[1m]))'
   - record: tikv_get_served_ops:by_type
-    expr: 'sum(rate(tikv_engine_get_served{db="kv",type=~"get_hit_l0|get_hit_l1|get_hit_l2_and_up"}[1m]))'
+    expr: 'sum(rate(tikv_engine_get_served{db="kv",type=~"get_hit_l0|get_hit_l1|get_hit_l2_and_up"}[1m]))by(type)'
   - record: tikv_avg_rocksdb_seek_dur
     expr: 'max(tikv_engine_seek_micro_seconds{db="kv",type="seek_average"})'
   - record: tikv_p99_rocksdb_seek_dur
@@ -102,7 +102,7 @@ cooked:
   - record: tikv_p95_sched_latch_wait_dur:by_type
     expr: 'histogram_quantile(0.95,sum(rate(tikv_scheduler_latch_wait_duration_seconds_bucket{type!=""}[5m]))by(le,type))>0'
   - record: tikv_avg_sched_latch_wait_dur:by_type
-    expr: 'rate(tikv_scheduler_latch_wait_duration_seconds_sum[5m])/rate(tikv_scheduler_latch_wait_duration_seconds_count[5m])>0'
+    expr: 'sum(rate(tikv_scheduler_latch_wait_duration_seconds_sum[5m]))by(type)/sum(rate(tikv_scheduler_latch_wait_duration_seconds_count[5m]))by(type)>0'
   - record: tikv_sched_thd_cpu_usage:by_instance
     expr: 'sum(rate(tikv_thread_cpu_seconds_total{name=~"sched_.*"}[1m]))by(instance)'
   - record: tikv_p99_sched_cmd_dur:by_type

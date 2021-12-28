@@ -1,6 +1,7 @@
 package prom
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/prometheus/common/model"
 	"os"
@@ -15,7 +16,7 @@ func TestMetricsMatrixConvertor_Convert(t *testing.T) {
 	}
 	sink := mmc.GetSink()
 	go func() {
-		if err := mmc.Convert(); err != nil {
+		if err := mmc.Convert(context.Background()); err != nil {
 			t.Error(err)
 			return
 		}
@@ -43,7 +44,7 @@ func TestCheckAlign(t *testing.T) {
 	if total != 480 {
 		t.Error("total should be 480")
 	}
-	if !gap.InGap(41) {
+	if !gap.InAnyGap(41) {
 		t.Error("in group return true, should be false")
 	}
 }

@@ -14,11 +14,11 @@ import (
 
 func convertCmd() *cobra.Command {
 	var (
-		input  = ""
-		output = ""
-		begin  = ""
-		end    = ""
-		format = ""
+		input   = ""
+		output  = ""
+		begin   = ""
+		end     = ""
+		format  = ""
 		filters = make([]string, 0)
 	)
 	cmd := &cobra.Command{
@@ -71,7 +71,7 @@ func convertCmd() *cobra.Command {
 
 			errG, ctx := errgroup.WithContext(context.Background())
 			errG.Go(func() error {
-				return c.Convert()
+				return c.Convert(ctx)
 			})
 			errG.Go(func() error {
 				return d.Start(ctx)

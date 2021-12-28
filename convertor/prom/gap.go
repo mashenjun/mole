@@ -3,14 +3,22 @@ package prom
 import "github.com/prometheus/common/model"
 
 type IGap interface {
-	InGap(idx int) bool
+	InAnyGap(idx int) bool
+	InAllGap(idx int) bool
 	GetAlignedIdx(metricsName string, idx int) int
 	GetGapInfo() ([]string, int)
+	GetFirstTsUnix() int64
 }
 
-type NoGap struct{}
+type NoGap struct {
+	firstTsUnix int64
+}
 
-func (ng *NoGap) InGap(int) bool {
+func (ng *NoGap) InAnyGap(int) bool {
+	return false
+}
+
+func (ng *NoGap) InAllGap(int) bool {
 	return false
 }
 
@@ -22,20 +30,34 @@ func (ng *NoGap) GetGapInfo() ([]string, int) {
 	return nil, 0
 }
 
-type MergedGap struct {
-	// todo
-	width int
-	overview []int           // gap overview information
-	slots    map[string][]int // gap information for each metric
+func (ng *NoGap) GetFirstTsUnix() int64 {
+	return ng.firstTsUnix
 }
 
-func (mg *MergedGap) InGap(idx int) bool {
+type MergedGap struct {
+	// todo
+	firstTsUnix    int64
+	gapStreamCnt   int
+	totalStreamCnt int
+	overview       []int            // idx is slot, element means how many stream has value on this slot
+	slots          map[string][]int // gap information for each metric,
+}
+
+func (mg *MergedGap) InAnyGap(idx int) bool {
 	if idx < 0 || idx >= len(mg.overview) {
 		return true
 	}
-	return mg.overview[idx] < mg.width
+	return mg.overview[idx] < mg.gapStreamCnt
 }
 
+func (mg *MergedGap) InAllGap(idx int) bool {
+	if idx < 0 || idx >= len(mg.overview) {
+		return true
+	}
+	return mg.overview[idx] == 0 && mg.gapStreamCnt == mg.totalStreamCnt
+}
+
+// GetAlignedIdx return -1 if the given metrics has gap on given idx
 func (mg *MergedGap) GetAlignedIdx(name string, idx int) int {
 	if slot, ok := mg.slots[name]; ok {
 		return slot[idx]
@@ -46,7 +68,7 @@ func (mg *MergedGap) GetAlignedIdx(name string, idx int) int {
 func (mg *MergedGap) GetGapInfo() ([]string, int) {
 	gapSlot := make([]int, 0)
 	for idx, cnt := range mg.overview {
-		if cnt > 0 && cnt < mg.width {
+		if cnt > 0 && cnt < mg.gapStreamCnt {
 			gapSlot = append(gapSlot, idx)
 		}
 	}
@@ -63,23 +85,29 @@ func (mg *MergedGap) GetGapInfo() ([]string, int) {
 	return names, len(gapSlot)
 }
 
-type MergedGapBuilder struct {
-	startTs  int64
-	step     int64
-	width    int
-	size     int
-	slots    map[string][]int
-	slotsCnt []int
+func (ng *MergedGap) GetFirstTsUnix() int64 {
+	return ng.firstTsUnix
 }
 
-func NewMergedGapBuilder(width int, startTs int64, step int64, size int) *MergedGapBuilder {
+type MergedGapBuilder struct {
+	firstTsUnix    int64
+	step           int64
+	gapStreamCnt   int
+	totalStreamCnt int
+	size           int
+	slots          map[string][]int
+	slotsCnt       []int
+}
+
+func NewMergedGapBuilder(gapStreamCnt int, firstTsUnix int64, step int64, size int, totalStreamCnt int) *MergedGapBuilder {
 	return &MergedGapBuilder{
-		startTs:  startTs,
-		step:     step,
-		width:    width,
-		size:     size,
-		slots:    make(map[string][]int),
-		slotsCnt: make([]int, size),
+		firstTsUnix:    firstTsUnix,
+		step:           step,
+		gapStreamCnt:   gapStreamCnt,
+		totalStreamCnt: totalStreamCnt,
+		size:           size,
+		slots:          make(map[string][]int),
+		slotsCnt:       make([]int, size),
 	}
 }
 
@@ -89,7 +117,7 @@ func (gb *MergedGapBuilder) Push(name string, pairs []model.SamplePair) {
 		slot[i] = -1
 	}
 	for idx, value := range pairs {
-		i := tsToSlot(gb.startTs, value.Timestamp.Unix(), gb.step)
+		i := tsToSlot(gb.firstTsUnix, value.Timestamp.Unix(), gb.step)
 		slot[i] = idx
 		gb.slotsCnt[i]++
 	}
@@ -98,13 +126,12 @@ func (gb *MergedGapBuilder) Push(name string, pairs []model.SamplePair) {
 
 func (gb *MergedGapBuilder) Build() *MergedGap {
 	mg := &MergedGap{
-		width: gb.width,
-		overview: gb.slotsCnt,
-		slots:    gb.slots,
+		firstTsUnix:    gb.firstTsUnix,
+		gapStreamCnt:   gb.gapStreamCnt,
+		totalStreamCnt: gb.totalStreamCnt,
+		overview:       gb.slotsCnt,
+		slots:          gb.slots,
 	}
-	//for i, cnt := range gb.slotsCnt {
-	//	mg.overview[i] = cnt< gb.width
-	//}
 	return mg
 }
 

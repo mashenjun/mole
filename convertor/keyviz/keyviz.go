@@ -1,6 +1,7 @@
 package keyviz
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,16 +20,16 @@ type HeatmapConvertor struct {
 	sink chan *proto.CSVMsg
 	// 左闭右闭
 	from int64
-	to int64
+	to   int64
 	// native way to define the filter rule
 	filterTable map[string]map[string]struct{} // db name -> (table name -> struct)
-	input string
-	split bool
+	input       string
+	split       bool
 }
 
 type HeatmapConvertorConvertorOpt func(*HeatmapConvertor) error
 
-func NewHeatmapConvertor(opts... HeatmapConvertorConvertorOpt) (*HeatmapConvertor, error) {
+func NewHeatmapConvertor(opts ...HeatmapConvertorConvertorOpt) (*HeatmapConvertor, error) {
 	mmc := &HeatmapConvertor{
 		sink:        make(chan *proto.CSVMsg, 42),
 		filterTable: make(map[string]map[string]struct{}),
@@ -87,7 +88,7 @@ func (c *HeatmapConvertor) SetFilterRules(rules []string) {
 		sl := strings.Split(strings.TrimSuffix(rule, ":"), ":")
 		if len(sl) == 1 {
 			c.filterTable[sl[0]] = alwaysMath
-		}else {
+		} else {
 			if _, ok := c.filterTable[sl[0]]; !ok {
 				c.filterTable[sl[0]] = make(map[string]struct{})
 			}
@@ -100,7 +101,7 @@ func (c *HeatmapConvertor) GetSink() <-chan *proto.CSVMsg {
 	return c.sink
 }
 
-func (c *HeatmapConvertor) Convert() error {
+func (c *HeatmapConvertor) Convert(ctx context.Context) error {
 	defer close(c.sink)
 	// 1. read input file and json marshal to heatmap matrix struct
 	// 2. convert heatmap data to csv format
@@ -120,21 +121,21 @@ func (c *HeatmapConvertor) Convert() error {
 	// convert to csv row format
 	if c.split {
 		return c.filterAndSplit(&mat)
-	}else {
+	} else {
 		return c.filterAndSink(&mat)
 	}
 }
 
 func (c *HeatmapConvertor) filterAndSink(mat *matrix.Matrix) error {
 	// csv header row is not necessary for heatmap data
-	data, _ ,err := extractData(mat)
+	data, _, err := extractData(mat)
 	if err != nil {
 		return err
 	}
 	if len(data) == 0 {
 		return nil
 	}
-	for i:=0 ; i < len(data); i++ {
+	for i := 0; i < len(data); i++ {
 		ts := mat.TimeAxis[i]
 		if !c.inRange(ts) {
 			continue
@@ -147,7 +148,7 @@ func (c *HeatmapConvertor) filterAndSink(mat *matrix.Matrix) error {
 			row = append(row, strconv.FormatUint(data[i][j], 10))
 		}
 		c.sink <- &proto.CSVMsg{
-			Data:    row,
+			Data: row,
 		}
 	}
 	return nil
@@ -155,7 +156,7 @@ func (c *HeatmapConvertor) filterAndSink(mat *matrix.Matrix) error {
 
 func (c *HeatmapConvertor) filterAndSplit(mat *matrix.Matrix) error {
 	// csv header row is not necessary for heatmap data
-	data, typ ,err := extractData(mat)
+	data, typ, err := extractData(mat)
 	if err != nil {
 		return err
 	}
@@ -163,7 +164,7 @@ func (c *HeatmapConvertor) filterAndSplit(mat *matrix.Matrix) error {
 		return nil
 	}
 	groupIdxs := c.groupIndexByTable(mat.KeyAxis, data, typ)
-	for i:=0; i < len(data); i++ {
+	for i := 0; i < len(data); i++ {
 		ts := mat.TimeAxis[i]
 		if !c.inRange(ts) {
 			continue
@@ -172,7 +173,7 @@ func (c *HeatmapConvertor) filterAndSplit(mat *matrix.Matrix) error {
 		for _, gi := range groupIdxs {
 			row := []string{strconv.FormatInt(ts, 10)}
 			for _, j := range gi.index {
-				row = append(row, strconv.FormatUint(data[i][j],10))
+				row = append(row, strconv.FormatUint(data[i][j], 10))
 			}
 			c.sink <- &proto.CSVMsg{
 				GroupID: gi.groupID,
@@ -188,10 +189,10 @@ func extractData(mat *matrix.Matrix) ([][]uint64, string, error) {
 		return data, consts.HeatMapTypeReadKeys, nil
 	}
 	if data, ok := mat.DataMap[consts.HeatMapTypeReadBytes]; ok {
-		return data, consts.HeatMapTypeReadBytes,nil
+		return data, consts.HeatMapTypeReadBytes, nil
 	}
 	if data, ok := mat.DataMap[consts.HeatMapTypeWriteKeys]; ok {
-		return data, consts.HeatMapTypeWriteKeys,nil
+		return data, consts.HeatMapTypeWriteKeys, nil
 	}
 	if data, ok := mat.DataMap[consts.HeadMapTypeWriteBytes]; ok {
 		return data, consts.HeadMapTypeWriteBytes, nil
@@ -200,7 +201,7 @@ func extractData(mat *matrix.Matrix) ([][]uint64, string, error) {
 }
 
 // genGroupID generate group id by using the first two labels
-func genGroupID(typ string, labels []string) string{
+func genGroupID(typ string, labels []string) string {
 	if len(labels) == 0 {
 		return ""
 	}
@@ -212,11 +213,11 @@ func genGroupID(typ string, labels []string) string{
 
 type groupIndex struct {
 	groupID string
-	index []int
+	index   []int
 }
 
 type GroupIndexConstructor struct {
-	data []groupIndex
+	data   []groupIndex
 	cursor int
 }
 
@@ -253,12 +254,12 @@ func (gic *GroupIndexConstructor) Result() []groupIndex {
 }
 
 // the return lookup is read only and has order
-func (c *HeatmapConvertor) groupIndexByTable (keys []decorator.LabelKey, data [][]uint64, tpy string) []groupIndex {
+func (c *HeatmapConvertor) groupIndexByTable(keys []decorator.LabelKey, data [][]uint64, tpy string) []groupIndex {
 	gic := NewGroupIndexConstructor()
 
 	for idx := range data[0] {
 		lk := keys[idx]
-		if !c.isTarget(lk.Labels){
+		if !c.isTarget(lk.Labels) {
 			continue
 		}
 		groupID := genGroupID(tpy, lk.Labels)
@@ -294,7 +295,7 @@ func (c *HeatmapConvertor) isTarget(labels []string) bool {
 	}
 	if tbl, ok := c.filterTable[labels[0]]; !ok {
 		return false
-	}else {
+	} else {
 		if _, find := tbl["*"]; find {
 			fmt.Println(labels)
 			return true

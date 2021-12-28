@@ -64,7 +64,7 @@ func reshapeCmd() *cobra.Command {
 					return err
 				}
 			}
-			
+
 			for _, rule := range fr.Rules {
 				fmt.Printf("start reshape %v ...\n", rule.Record)
 				inputFile := filepath.Join(inputDir, fmt.Sprintf("%s.json", rule.Record))
@@ -78,7 +78,7 @@ func reshapeCmd() *cobra.Command {
 				}
 				mcc.SetFilterLabels(rule.Filter)
 				if len(rule.ApplyAgg) > 0 {
-					mcc.SetAggregation(rule.ApplyAgg)
+					mcc.SetProcess(rule.ApplyAgg)
 				}
 				source := mcc.GetSink()
 				outputFile := filepath.Join(outputDir, fmt.Sprintf("%s.csv", rule.OutputName()))
@@ -90,7 +90,7 @@ func reshapeCmd() *cobra.Command {
 				errG, ctx := errgroup.WithContext(context.Background())
 
 				errG.Go(func() error {
-					return mcc.Convert()
+					return mcc.Convert(ctx)
 				})
 				errG.Go(func() error {
 					return d.Start(ctx)
