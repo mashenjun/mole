@@ -16,3 +16,7 @@ const (
 	ConvertorProcessFillGap        = "fill_gap"
 	ConvertorProcessDropGap        = "drop_gap"
 )
+
+const (
+	MetaYamlName = "meta.yaml"
+)
