@@ -64,7 +64,7 @@ cooked:
     priority: 0x600
 # Storage panel Read TODO ratio by total cup time
   - record: tikv_readpool_thd_cpu_usage:by_instance
-    expr: 'sum(rate(tikv_thread_cpu_seconds_total{name=~"store_read.*"}[1m]))by(instance)/sum(tikv_server_cpu_cores_quota)by(instance)
+    expr: 'sum(rate(tikv_thread_cpu_seconds_total{name=~"store_read.*"}[1m]))by(instance)/sum(tikv_server_cpu_cores_quota)by(instance)'
     priority: 0x700
 # Coprocessor panel Read
   - record: tikv_p99_copr_wait_dur:by_req
