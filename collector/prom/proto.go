@@ -22,7 +22,7 @@ type Meta struct {
 	EndTimestamp    string `yaml:"end_timestamp"`
 }
 
-func (m *Meta) SaveFile(fileName string) error {
+func (m *Meta) SaveTo(fileName string) error {
 	data, err := yaml.Marshal(&m)
 	if err != nil {
 		return err
