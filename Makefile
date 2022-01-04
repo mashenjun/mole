@@ -19,7 +19,7 @@ PACKAGES            := $$($(PACKAGE_LIST))
 
 CURDIR := $(shell pwd)
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
-PACK_LINUX_DIR := $(PROJECT_DIR)/bin/mole
+PACK_LINUX_DIR := $(PROJECT_DIR)/bin/linux/mole$(BUILD_VERSION)
 export PATH := $(CURDIR)/bin/:$(PATH)
 
 
@@ -39,6 +39,10 @@ test:
 
 # pack mole binary, python script and related yaml config into a tar package.
 pack-linux: cli-linux
+	@if [ -z $(BUILD_VERSION) ]; then\
+		echo "BUILD_VERSION is not set";\
+		exit 1;\
+	fi
 	@echo pack dir is $(PACK_LINUX_DIR)
 	@mkdir -p $(PACK_LINUX_DIR)/config
 	@cp bin/linux/mole $(PACK_LINUX_DIR)
@@ -46,7 +50,7 @@ pack-linux: cli-linux
 	@cp data-analysis/example/*.yaml $(PACK_LINUX_DIR)/config/
 	@cp data-analysis/{prom_metrics_feature_score.py,prom_metrics_feature_score_distance.py} $(PACK_LINUX_DIR)
 	@cp data-analysis/heatmap_feature_distance.py $(PACK_LINUX_DIR)
-	@tar -czf bin/mole.linux-amd64.tar.gz -C bin mole
+	@tar -czf bin/linux/mole$(BUILD_VERSION).linux-amd64.tar.gz -C bin/linux mole$(BUILD_VERSION)
 
 # Run golangci-lint linter
 lint: golangci-lint
