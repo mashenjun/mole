@@ -25,6 +25,9 @@ func metricsCmd() *cobra.Command {
 		target            = ""
 		continues         = false
 		subDir            = true
+		clusterID         = ""
+		vmSelect          = false
+		accountID         = 0
 	)
 
 	cmd := &cobra.Command{
@@ -38,7 +41,8 @@ func metricsCmd() *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// TODO: init the related component and start the process
+			// TODO: set vmselect info if necessary
+			// init endpoint list
 			topo := make([]prom.Endpoint, 0, len(hosts))
 			for _, h := range hosts {
 				u, err := url.Parse(h)
@@ -46,13 +50,19 @@ func metricsCmd() *cobra.Command {
 					fmt.Printf("hosts is invalid: %v\n", err)
 					return err
 				}
-				topo = append(topo, prom.Endpoint{
+				ep := prom.Endpoint{
 					Schema: u.Scheme,
 					Host:   u.Hostname(),
 					Port:   u.Port(),
-				})
+				}
+				if vmSelect {
+					ep.Type = prom.EndpointVMSelect
+					ep.AccountID = accountID
+				}
+				topo = append(topo, ep)
 			}
 
+			// init http client
 			cli := &http.Client{
 				Transport: &http.Transport{
 					Proxy: http.ProxyFromEnvironment,
@@ -69,6 +79,8 @@ func metricsCmd() *cobra.Command {
 				},
 				Timeout: 60 * time.Second,
 			}
+
+			// init metrics list
 			ml := MetricsList{Raw: make([]string, 0), Cooked: make([]prom.MetricsRecord, 0)}
 			if len(target) != 0 {
 				b, err := ioutil.ReadFile(target)
@@ -81,6 +93,7 @@ func metricsCmd() *cobra.Command {
 					return err
 				}
 			}
+
 			mc, err := prom.NewMetricsCollect(
 				prom.WithHttpCli(cli),
 				prom.WithTimeRange(begin, end),
@@ -97,6 +110,9 @@ func metricsCmd() *cobra.Command {
 			// set target metrics if user give target metrics file
 			mc.SetRawMetrics(ml.Raw)
 			mc.SetCookedRecord(ml.Cooked)
+			if len(clusterID) > 0 {
+				mc.SetClusterID(clusterID)
+			}
 			// use Collect method
 			if _, err := mc.Prepare(topo); err != nil {
 				fmt.Printf("prepare metrics error: %+v\n", err)
@@ -111,13 +127,16 @@ func metricsCmd() *cobra.Command {
 	}
 	cmd.Flags().Int64VarP(&concurrency, "concurrency", "c", int64(runtime.NumCPU()), "concurrency setting")
 	cmd.Flags().StringVarP(&begin, "from", "f", time.Now().Add(time.Hour*-2).Format(time.RFC3339), "start time point when collecting timeseries data")
-	cmd.Flags().StringVarP(&end, "to", "t", time.Now().Format(time.RFC3339), "stop time point when collecting timeseries data")
+	cmd.Flags().StringVarP(&end, "to", "t", time.Now().Format(time.RFC3339), "stop time point when collecting time-series data")
 	cmd.Flags().StringVarP(&output, "output", "o", "", "output directory of collected data")
 	cmd.Flags().BoolVarP(&merge, "merge", "m", true, "merge content of different range for one metrics into one file")
 	cmd.Flags().StringSliceVarP(&hosts, "hosts", "H", nil, "hosts list with schema://ip:port format")
 	cmd.Flags().StringVarP(&target, "target", "T", "", "path to yaml file containing target metrics")
 	cmd.Flags().BoolVarP(&continues, "continues", "C", false, "set the collector to skip the existed metrics")
-	cmd.Flags().BoolVarP(&subDir, "subdir", "", true, "set the collector to store data in sub directoroes")
+	cmd.Flags().BoolVarP(&subDir, "subdir", "", true, "set the collector to store data in sub directories")
+	cmd.Flags().StringVarP(&clusterID, "cluster-id", "", "", "set cluster id")
+	cmd.Flags().BoolVarP(&vmSelect, "vm-select", "", false, "set if collect data form vm select endpoint, default is false")
+	cmd.Flags().IntVarP(&accountID, "account-id", "", 1, "set account if for vm select endpoint, default is 1")
 	return cmd
 }
 

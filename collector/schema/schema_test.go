@@ -6,8 +6,12 @@ import (
 )
 
 func TestSchemaCollector_Collect(t *testing.T) {
+	dsn := os.Getenv("TIDB_DSN")
+	if len(dsn) == 0 {
+		t.Skip("set TIDB_DSN to run the test")
+	}
 	config := &MysqlConfig{
-		DSN:          os.Getenv("TIDB_DSN"),
+		DSN: dsn,
 	}
 	db, err := Dial(config)
 	if err != nil {

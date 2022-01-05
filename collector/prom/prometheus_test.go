@@ -11,6 +11,9 @@ import (
 
 func TestMetricCollect_Collect(t *testing.T) {
 	endpoint := os.Getenv("ENDPOINT")
+	if len(endpoint) == 0 {
+		t.Skip("set ENDPOINT to run the test")
+	}
 	cli := &http.Client{
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
@@ -31,15 +34,15 @@ func TestMetricCollect_Collect(t *testing.T) {
 	topo := []Endpoint{
 		{
 			Schema: "http",
-			Host: s[0],
-			Port: s[1],
+			Host:   s[0],
+			Port:   s[1],
 		},
 	}
 
 	mc, err := NewMetricsCollect(
 		WithHttpCli(cli),
-		WithTimeRange("",""),
-		)
+		WithTimeRange("", ""),
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,7 +54,7 @@ func TestMetricCollect_Collect(t *testing.T) {
 func Test_ParseTimeRange(t *testing.T) {
 	begin := "2021-08-02T17:11:50+08:00"
 	end := "2021-08-03T17:11:50+08:00"
-	ts,_, err := parseTimeRange(begin, end)
+	ts, _, err := parseTimeRange(begin, end)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,12 +65,15 @@ func Test_ParseTimeRange(t *testing.T) {
 
 func TestMetricsCollect_GetInstanceCnt(t *testing.T) {
 	endpoint := os.Getenv("ENDPOINT")
+	if len(endpoint) == 0 {
+		t.Skip("set ENDPOINT to run the test")
+	}
 	s := strings.Split(endpoint, ":")
 	topo := []Endpoint{
 		{
 			Schema: "http",
-			Host: s[0],
-			Port: s[1],
+			Host:   s[0],
+			Port:   s[1],
 		},
 	}
 
@@ -77,7 +83,7 @@ func TestMetricsCollect_GetInstanceCnt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cnt, err := mc.getInstanceCnt(topo[0], "tikv");
+	cnt, err := mc.getInstanceCnt(topo[0], "tikv")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -59,6 +59,7 @@ rules:
   - record: tikv_p99_sched_cmd_dur:by_type
     apply_agg: fill_gap
   - record: tikv_p99_raftstore_req_wait_dur:by_instance
+    apply_agg: fill_gap
   - record: tikv_raftstore_thd_cpu_usage:by_instance
   - record: tikv_p99_raftstore_async_req_dur
   - record: tikv_avg_raftstore_async_req_dur
@@ -72,6 +73,7 @@ rules:
   - record: tikv_avg_rocksdb_write_dur:kv
   - record: tikv_apply_thd_cpu_usage:by_instance
   - record: node_disk_write_lat:by_instance:by_device
+    -
   - record: node_disk_write_ops:by_instance:by_device
   - record: node_disk_write_bw:by_instance:by_device
   - record: node_disk_write_dur:by_instance:by_device

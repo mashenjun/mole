@@ -14,6 +14,9 @@ import (
 func TestKeyVizCollect_Login(t *testing.T) {
 	code := os.Getenv("CODE")
 	host := os.Getenv("HOST")
+	if len(code) == 0 || len(host) == 0 {
+		t.Skip("set CODE and HOST to run the test")
+	}
 	cli := &http.Client{
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
