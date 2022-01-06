@@ -91,3 +91,28 @@ func TestMetricsCollect_GetInstanceCnt(t *testing.T) {
 		t.Fatal("wrong result")
 	}
 }
+
+func TestMetricsCollect_injectTiDBClusterLabelMatcher(t *testing.T) {
+	simple := "tikv_thread_cpu_seconds_total"
+	aggregation := `sum(rate(tikv_thread_cpu_seconds_total{name=~"raftstore_.*"}[1m]))by(instance)/sum(tikv_server_cpu_cores_quota)by(instance)`
+	{
+		expr, err := injectTiDBClusterLabelMatcher(simple, "123")
+		if err != nil {
+			t.Error(err)
+		}
+		if !strings.Contains(expr, `tidb_cluster="123"`) {
+			t.Fail()
+		}
+	}
+	{
+		expr, err := injectTiDBClusterLabelMatcher(aggregation, "123")
+		if err != nil {
+			t.Error(err)
+		}
+		for _, s := range strings.Split(expr, "/") {
+			if !strings.Contains(s, `tidb_cluster="123"`) {
+				t.Fail()
+			}
+		}
+	}
+}

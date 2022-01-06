@@ -9,6 +9,8 @@ import (
 	"github.com/pingcap/tiup/pkg/cliutil/progress"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
 	"github.com/prometheus/common/model"
+	"github.com/prometheus/prometheus/model/labels"
+	"github.com/prometheus/prometheus/promql/parser"
 	"io"
 	"math"
 	"net/http"
@@ -205,6 +207,17 @@ func (c *MetricsCollect) Prepare(topo []Endpoint) (map[string][]CollectStat, err
 		})
 	}
 	c.targetRecord = append(c.targetRecord, c.cookedRecord...)
+	// inject `tidb_cluster` label matcher if necessary.
+	if len(c.clusterID) != 0 {
+		for i := range c.targetRecord {
+			expr, err := injectTiDBClusterLabelMatcher(c.targetRecord[i].Expr, c.clusterID)
+			if err != nil {
+				return nil, err
+			}
+			c.targetRecord[i].Expr = expr
+		}
+
+	}
 	return nil, nil
 }
 
@@ -540,4 +553,25 @@ func parseTimeRange(scrapeStart, scrapeEnd string) ([]string, int64, error) {
 	}
 
 	return ts, tsEnd.Unix() - tsStart.Unix(), nil
+}
+
+func injectTiDBClusterLabelMatcher(input string, clusterID string) (string, error) {
+	expr, err := parser.ParseExpr(input)
+	if err != nil {
+		return "", err
+	}
+	matcher, err := labels.NewMatcher(labels.MatchEqual, "tidb_cluster", clusterID)
+	if err != nil {
+		return "", err
+	}
+	parser.Inspect(expr, func(node parser.Node, nodes []parser.Node) error {
+		switch n := node.(type) {
+		case *parser.VectorSelector:
+			n.LabelMatchers = append(n.LabelMatchers, matcher)
+		default:
+			// do nothing
+		}
+		return nil
+	})
+	return expr.String(), nil
 }

@@ -14,37 +14,69 @@ import (
 	"time"
 )
 
+type metricsCmdOption struct {
+	begin       string
+	end         string
+	concurrency int64
+	output      string
+	merge       bool
+	hosts       []string
+	target      string
+	continues   bool
+	subDir      bool
+	clusterID   string
+	style       string
+	accountID   int
+}
+
+func (opt *metricsCmdOption) validate() error {
+	if len(opt.output) == 0 {
+		return errors.New("output is not set")
+	}
+	if opt.style == "vm-select" && opt.accountID == 0 {
+		return errors.New("account-id is not set with vm-select style")
+	}
+	return nil
+}
+
 func metricsCmd() *cobra.Command {
-	var (
-		begin             = ""
-		end               = ""
-		concurrency int64 = 0
-		output            = ""
-		merge             = true
-		hosts             = make([]string, 0)
-		target            = ""
-		continues         = false
-		subDir            = true
-		clusterID         = ""
-		vmSelect          = false
-		accountID         = 0
-	)
+	// TODO@shenjun: move all the field to an option struct and check validation.
+	//var (
+	//	begin             = ""
+	//	end               = ""
+	//	concurrency int64 = 0
+	//	output            = ""
+	//	merge             = true
+	//	hosts             = make([]string, 0)
+	//	target            = ""
+	//	continues         = false
+	//	subDir            = true
+	//	clusterID         = ""
+	//	style             = "prometheus"
+	//	accountID         = 0
+	//)
+
+	var opt = metricsCmdOption{
+		merge:  true,
+		hosts:  make([]string, 0),
+		subDir: true,
+		style:  "prometheus",
+	}
 
 	cmd := &cobra.Command{
 		Use:   `metrics`,
 		Short: `collect metrics from target prometheus`,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			if len(output) == 0 {
+			if err := opt.validate(); err != nil {
 				_ = cmd.Help()
-				return errors.New("missing output flag")
+				return err
 			}
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// TODO: set vmselect info if necessary
 			// init endpoint list
-			topo := make([]prom.Endpoint, 0, len(hosts))
-			for _, h := range hosts {
+			topo := make([]prom.Endpoint, 0, len(opt.hosts))
+			for _, h := range opt.hosts {
 				u, err := url.Parse(h)
 				if err != nil {
 					fmt.Printf("hosts is invalid: %v\n", err)
@@ -55,9 +87,12 @@ func metricsCmd() *cobra.Command {
 					Host:   u.Hostname(),
 					Port:   u.Port(),
 				}
-				if vmSelect {
+				switch opt.style {
+				case "vm-select":
 					ep.Type = prom.EndpointVMSelect
-					ep.AccountID = accountID
+					ep.AccountID = opt.accountID
+				default:
+					// do nothing
 				}
 				topo = append(topo, ep)
 			}
@@ -82,8 +117,8 @@ func metricsCmd() *cobra.Command {
 
 			// init metrics list
 			ml := MetricsList{Raw: make([]string, 0), Cooked: make([]prom.MetricsRecord, 0)}
-			if len(target) != 0 {
-				b, err := ioutil.ReadFile(target)
+			if len(opt.target) != 0 {
+				b, err := ioutil.ReadFile(opt.target)
 				if err != nil {
 					fmt.Printf("read file error: %+v", err)
 					return err
@@ -96,12 +131,12 @@ func metricsCmd() *cobra.Command {
 
 			mc, err := prom.NewMetricsCollect(
 				prom.WithHttpCli(cli),
-				prom.WithTimeRange(begin, end),
-				prom.WithConcurrency(int(concurrency)),
-				prom.WithMerge(merge),
-				prom.WithOutputDir(output),
-				prom.WithContinues(continues),
-				prom.WithSubDirEnable(subDir),
+				prom.WithTimeRange(opt.begin, opt.end),
+				prom.WithConcurrency(int(opt.concurrency)),
+				prom.WithMerge(opt.merge),
+				prom.WithOutputDir(opt.output),
+				prom.WithContinues(opt.continues),
+				prom.WithSubDirEnable(opt.subDir),
 			)
 			if err != nil {
 				fmt.Printf("new metrics collect error: %+v\n", err)
@@ -110,8 +145,8 @@ func metricsCmd() *cobra.Command {
 			// set target metrics if user give target metrics file
 			mc.SetRawMetrics(ml.Raw)
 			mc.SetCookedRecord(ml.Cooked)
-			if len(clusterID) > 0 {
-				mc.SetClusterID(clusterID)
+			if len(opt.clusterID) > 0 {
+				mc.SetClusterID(opt.clusterID)
 			}
 			// use Collect method
 			if _, err := mc.Prepare(topo); err != nil {
@@ -125,18 +160,18 @@ func metricsCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().Int64VarP(&concurrency, "concurrency", "c", int64(runtime.NumCPU()), "concurrency setting")
-	cmd.Flags().StringVarP(&begin, "from", "f", time.Now().Add(time.Hour*-2).Format(time.RFC3339), "start time point when collecting timeseries data")
-	cmd.Flags().StringVarP(&end, "to", "t", time.Now().Format(time.RFC3339), "stop time point when collecting time-series data")
-	cmd.Flags().StringVarP(&output, "output", "o", "", "output directory of collected data")
-	cmd.Flags().BoolVarP(&merge, "merge", "m", true, "merge content of different range for one metrics into one file")
-	cmd.Flags().StringSliceVarP(&hosts, "hosts", "H", nil, "hosts list with schema://ip:port format")
-	cmd.Flags().StringVarP(&target, "target", "T", "", "path to yaml file containing target metrics")
-	cmd.Flags().BoolVarP(&continues, "continues", "C", false, "set the collector to skip the existed metrics")
-	cmd.Flags().BoolVarP(&subDir, "subdir", "", true, "set the collector to store data in sub directories")
-	cmd.Flags().StringVarP(&clusterID, "cluster-id", "", "", "set cluster id")
-	cmd.Flags().BoolVarP(&vmSelect, "vm-select", "", false, "set if collect data form vm select endpoint, default is false")
-	cmd.Flags().IntVarP(&accountID, "account-id", "", 1, "set account if for vm select endpoint, default is 1")
+	cmd.Flags().Int64VarP(&opt.concurrency, "concurrency", "c", int64(runtime.NumCPU()), "concurrency setting")
+	cmd.Flags().StringVarP(&opt.begin, "from", "f", time.Now().Add(time.Hour*-2).Format(time.RFC3339), "start time point when collecting timeseries data")
+	cmd.Flags().StringVarP(&opt.end, "to", "t", time.Now().Format(time.RFC3339), "stop time point when collecting time-series data")
+	cmd.Flags().StringVarP(&opt.output, "output", "o", "", "output directory of collected data")
+	cmd.Flags().BoolVarP(&opt.merge, "merge", "m", true, "merge content of different range for one metrics into one file")
+	cmd.Flags().StringSliceVarP(&opt.hosts, "hosts", "H", nil, "hosts list with schema://ip:port format")
+	cmd.Flags().StringVarP(&opt.target, "target", "T", "", "path to yaml file containing target metrics")
+	cmd.Flags().BoolVarP(&opt.continues, "continues", "C", false, "set the collector to skip the existed metrics")
+	cmd.Flags().BoolVarP(&opt.subDir, "subdir", "", true, "set the collector to store data in sub directories")
+	cmd.Flags().StringVarP(&opt.clusterID, "cluster-id", "", "", "set cluster id")
+	cmd.Flags().StringVarP(&opt.style, "style", "s", "prometheus", "set endpoint type, support value is prometheus, vm-select")
+	cmd.Flags().IntVarP(&opt.accountID, "account-id", "", 1, "set account if for vm select endpoint")
 	return cmd
 }
 
