@@ -74,7 +74,7 @@ func WithTimeRange(begin string, end string) MetricsMatrixConvertorOpt {
 func WithInput(input string) MetricsMatrixConvertorOpt {
 	return func(convertor *MetricsMatrixConvertor) error {
 		convertor.input = input
-		convertor.recordName = path.Base(input)
+		convertor.recordName = strings.TrimSuffix(path.Base(input), path.Ext(input))
 		return nil
 	}
 }

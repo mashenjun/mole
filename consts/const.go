@@ -20,3 +20,15 @@ const (
 const (
 	MetaYamlName = "meta.yaml"
 )
+
+const (
+	PromPathRangeQuery   = "/api/v1/query_range"
+	PromPathInstantQuery = "/api/v1/query"
+	PromPathLabelList    = "/api/v1/label/__name__/values"
+
+	PromExprInstanceCnt = `count(probe_success{tidb_cluster="%s", group="%s"})`
+)
+
+const (
+	VMSelectPromPrefix = `/select/%d/prometheus`
+)

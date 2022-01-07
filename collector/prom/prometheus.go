@@ -8,7 +8,11 @@ import (
 	"github.com/mashenjun/mole/utils"
 	"github.com/pingcap/tiup/pkg/cliutil/progress"
 	tiuputils "github.com/pingcap/tiup/pkg/utils"
+	"github.com/prometheus/common/model"
+	"github.com/prometheus/prometheus/model/labels"
+	"github.com/prometheus/prometheus/promql/parser"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
@@ -39,8 +43,8 @@ type MetricsRecord struct {
 // MetricsCollect is the options collecting metrics
 type MetricsCollect struct {
 	timeSteps    []string
-	rawMetrics   []string        // raw metric list
-	cookedRecord []MetricsRecord // cooked metric list
+	rawMetrics   []string        // raw metric list, can be empty
+	cookedRecord []MetricsRecord // cooked metric list, can be empty
 	targetRecord []MetricsRecord // merge raw metrics and cooked metrics
 	concurrency  int
 	scrapeBegin  string    // time range to filter metrics.
@@ -53,6 +57,7 @@ type MetricsCollect struct {
 	fileFlag     int // file flag used to open file
 	continues    bool
 	subDirEnable bool // if store the collect metrics in to sub dir, default true
+	clusterID    string
 }
 
 type MetricsCollectOpt func(*MetricsCollect) error
@@ -164,6 +169,10 @@ func (c *MetricsCollect) SetCookedRecord(cr []MetricsRecord) {
 	c.cookedRecord = cr
 }
 
+func (c *MetricsCollect) SetClusterID(clusterID string) {
+	c.clusterID = clusterID
+}
+
 // Prepare implements the Collector interface
 func (c *MetricsCollect) Prepare(topo []Endpoint) (map[string][]CollectStat, error) {
 	if len(topo) < 1 {
@@ -172,11 +181,9 @@ func (c *MetricsCollect) Prepare(topo []Endpoint) (map[string][]CollectStat, err
 	}
 	var queryOK bool
 	var queryErr error
-	var promAddr string
 	//var targets []*TargetMetrics
-	for _, prom := range topo {
-		promAddr = fmt.Sprintf("%s://%s:%s", prom.Schema, prom.Host, prom.Port)
-		metrics, err := c.getMetricList(promAddr)
+	for _, promEp := range topo {
+		metrics, err := c.getMetricsList(promEp)
 		if err == nil {
 			queryOK = true
 		}
@@ -200,6 +207,17 @@ func (c *MetricsCollect) Prepare(topo []Endpoint) (map[string][]CollectStat, err
 		})
 	}
 	c.targetRecord = append(c.targetRecord, c.cookedRecord...)
+	// inject `tidb_cluster` label matcher if necessary.
+	if len(c.clusterID) != 0 {
+		for i := range c.targetRecord {
+			expr, err := injectTiDBClusterLabelMatcher(c.targetRecord[i].Expr, c.clusterID)
+			if err != nil {
+				return nil, err
+			}
+			c.targetRecord[i].Expr = expr
+		}
+
+	}
 	return nil, nil
 }
 
@@ -297,7 +315,7 @@ func (c *MetricsCollect) Collect(topo []Endpoint) error {
 	return nil
 }
 
-func (c *MetricsCollect) getMetricList(prom string) ([]string, error) {
+func (c *MetricsCollect) getMetricsList(ep Endpoint) ([]string, error) {
 	if len(c.rawMetrics) == 0 {
 		return c.rawMetrics, nil
 	}
@@ -308,7 +326,7 @@ func (c *MetricsCollect) getMetricList(prom string) ([]string, error) {
 	if !fillMetricsName {
 		return c.rawMetrics, nil
 	}
-	resp, err := c.cli.Get(fmt.Sprintf("%s/api/v1/label/__name__/values", prom))
+	resp, err := c.cli.Get(fmt.Sprintf("%s%s", ep.Address(), ep.WithPrefixPath(consts.PromPathLabelList)))
 	if err != nil {
 		return nil, err
 	}
@@ -327,7 +345,6 @@ func (c *MetricsCollect) getMetricList(prom string) ([]string, error) {
 }
 
 func (c *MetricsCollect) collectMetric(prom Endpoint, ts []string, mtc string, expr string) error {
-	promAddr := fmt.Sprintf("%s://%s:%s", prom.Schema, prom.Host, prom.Port)
 	for i := 0; i < len(ts)-1; i++ {
 		if err := tiuputils.Retry(
 			func() error {
@@ -341,7 +358,7 @@ func (c *MetricsCollect) collectMetric(prom Endpoint, ts []string, mtc string, e
 					end = et.Add(-1 * time.Second).Format(time.RFC3339)
 				}
 				resp, err := c.cli.PostForm(
-					fmt.Sprintf("%s/api/v1/query_range", promAddr),
+					fmt.Sprintf("%s%s", prom.Address(), prom.WithPrefixPath(consts.PromPathRangeQuery)),
 					url.Values{
 						"query": {expr},
 						"start": {start},
@@ -398,16 +415,19 @@ func (c *MetricsCollect) collectMetric(prom Endpoint, ts []string, mtc string, e
 	return nil
 }
 
+// we need a way to find instances cnt which can work with victoria-metrics and prometheus
+// job is `tikv`, `tidb`, `pd`
 func (c *MetricsCollect) getInstanceCnt(prom Endpoint, job string) (int, error) {
-	u, err := url.Parse("/api/v1/targets/metadata")
+	u, err := url.Parse(prom.WithPrefixPath(consts.PromPathInstantQuery))
 	if err != nil {
 		return 0, err
 	}
-	u.Host = prom.Address()
+	u.Host = prom.HostPort()
 	u.Scheme = prom.Schema
 	q := u.Query()
-	q.Add("metric", "process_start_time_seconds")
-	q.Add("match_target", fmt.Sprintf(`{job=~".*%+v$"}`, job))
+	expr := fmt.Sprintf(consts.PromExprInstanceCnt, c.clusterID, job)
+	q.Add("query", expr)
+	q.Add("time", c.beginTime.Format(time.RFC3339))
 	u.RawQuery = q.Encode()
 	resp, err := c.cli.Get(u.String())
 	if err != nil {
@@ -418,21 +438,31 @@ func (c *MetricsCollect) getInstanceCnt(prom Endpoint, job string) (int, error) 
 		_, _ = io.Copy(io.Discard, resp.Body)
 		_ = resp.Body.Close()
 	}()
+
 	if resp.StatusCode != http.StatusOK {
 		return 0, errors.New(resp.Status)
 	}
+	/*
+		resp example:
+		{"status":"success","isPartial":false,"data":{"resultType":"vector","result":[{"metric":{},"value":[1639497601,"8"]}]}}
+	*/
 	data := struct {
-		Data []struct {
-			Target struct {
-				Instance string `json:"instance"`
-				Job      string `json:"job"`
-			} `json:"target"`
+		Data struct {
+			Result []struct {
+				Value model.SamplePair `json:"value"`
+			} `json:"result"`
 		} `json:"data"`
 	}{}
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
 		return 0, err
 	}
-	return len(data.Data), nil
+	if len(data.Data.Result) == 0 {
+		return 0, nil
+	}
+	if math.IsNaN(float64(data.Data.Result[0].Value.Value)) {
+		return 0, errors.New("prometheus return NaN")
+	}
+	return int(data.Data.Result[0].Value.Value), nil
 }
 
 func (c *MetricsCollect) genFileName(mtc string, idx int) string {
@@ -523,4 +553,25 @@ func parseTimeRange(scrapeStart, scrapeEnd string) ([]string, int64, error) {
 	}
 
 	return ts, tsEnd.Unix() - tsStart.Unix(), nil
+}
+
+func injectTiDBClusterLabelMatcher(input string, clusterID string) (string, error) {
+	expr, err := parser.ParseExpr(input)
+	if err != nil {
+		return "", fmt.Errorf("parse %s error %w", input, err)
+	}
+	matcher, err := labels.NewMatcher(labels.MatchEqual, "tidb_cluster", clusterID)
+	if err != nil {
+		return "", err
+	}
+	parser.Inspect(expr, func(node parser.Node, nodes []parser.Node) error {
+		switch n := node.(type) {
+		case *parser.VectorSelector:
+			n.LabelMatchers = append(n.LabelMatchers, matcher)
+		default:
+			// do nothing
+		}
+		return nil
+	})
+	return expr.String(), nil
 }

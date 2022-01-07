@@ -10,6 +10,9 @@ import (
 
 func TestMetricsMatrixConvertor_Convert(t *testing.T) {
 	input := os.Getenv("INPUT_FILE")
+	if len(input) == 0 {
+		t.Skip("set INPUT_FILE to run the test")
+	}
 	mmc, err := NewMetricsMatrixConvertor(WithInput(input))
 	if err != nil {
 		t.Fatal(err)
