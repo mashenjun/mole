@@ -93,10 +93,9 @@ func TestMetricsCollect_GetInstanceCnt(t *testing.T) {
 }
 
 func TestMetricsCollect_injectTiDBClusterLabelMatcher(t *testing.T) {
-	simple := "tikv_thread_cpu_seconds_total"
-	aggregation := `sum(rate(tikv_thread_cpu_seconds_total{name=~"raftstore_.*"}[1m]))by(instance)/sum(tikv_server_cpu_cores_quota)by(instance)`
 	{
-		expr, err := injectTiDBClusterLabelMatcher(simple, "123")
+		input := "tikv_thread_cpu_seconds_total"
+		expr, err := injectTiDBClusterLabelMatcher(input, "123")
 		if err != nil {
 			t.Error(err)
 		}
@@ -105,7 +104,20 @@ func TestMetricsCollect_injectTiDBClusterLabelMatcher(t *testing.T) {
 		}
 	}
 	{
-		expr, err := injectTiDBClusterLabelMatcher(aggregation, "123")
+		input := `sum(rate(tikv_thread_cpu_seconds_total{name=~"raftstore_.*"}[1m]))by(instance)/sum(tikv_server_cpu_cores_quota)by(instance)`
+		expr, err := injectTiDBClusterLabelMatcher(input, "123")
+		if err != nil {
+			t.Error(err)
+		}
+		for _, s := range strings.Split(expr, "/") {
+			if !strings.Contains(s, `tidb_cluster="123"`) {
+				t.Fail()
+			}
+		}
+	}
+	{
+		input := `sum(label_replace(go_memstats_heap_inuse_bytes{job=~"tidb.*"},"ip","$1","instance","(.*):.*")/on(ip)group_left label_replace(node_memory_MemTotal_bytes,"ip", "$1","instance","(.*):.*"))by(instance)`
+		expr, err := injectTiDBClusterLabelMatcher(input, "123")
 		if err != nil {
 			t.Error(err)
 		}

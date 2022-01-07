@@ -3,77 +3,114 @@ rules:
   - record: tidb_p99_rt:total
   - record: tidb_p99_get_token_dur
   - record: tidb_conn_cnt:by_instance
+    replace_name: tidb_conn_cnt
   - record: tidb_mem_usage:by_instance
+    replace_name: tidb_mem_usage
   - record: tidb_p99_parse_dur:by_sql_type
+    replace_name: tidb_p99_parse_dur
     apply_agg: fill_gap
   - record: tidb_p99_compile_dur:by_sql_type
-  - record: tidb_p99_txn_dur:by_sql_type
+    replace_name: tidb_p99_compile_dur
+  - record: tidb_p99_txn_dur:by_type
+    replace_name: tidb_p99_txn_dur
     apply_agg: fill_gap
-  - record: tidb_p99_txn_stmt_cnt:by_sql_type
+  - record: tidb_p99_txn_stmt_cnt:by_type
+    replace_name: tidb_p99_txn_stmt_cnt
     apply_agg: fill_gap
   - record: tidb_p99_txn_retry_cnt
   - record: tidb_p999_kv_cmd_rt:get:by_type
+    replace_name: tidb_p99_txn_retry_cnt:get
   - record: tidb_p99_kv_cmd_rt:get:by_type
+    replace_name: tidb_p99_kv_cmd_rt:get
   - record: tidb_lock_resolve_ops:by_type
+    replace_name: tidb_lock_resolve_ops
   - record: tidb_p99_backoff_dur:by_type
+    replace_name: tidb_p99_backoff_dur
     apply_agg: fill_gap
   - record: tidb_backoff_ops:by_type
+    replace_name: tidb_backoff_ops
   - record: pd_p999_cmd_wait_dur:tso
   - record: pd_p999_rpc_dur:tso
   - record: tikv_p99_rt:read:by_type
+    replace_name: tikv_p99_rt:read
   - record: tikv_grpc_thd_cpu_usage:by_instance:by_name
+    replace_name: tikv_grpc_thd_cpu_usage
   - record: tikv_readpool_thd_cpu_usage:by_instance
+    replace_name: tikv_readpool_thd_cpu_usage
     apply_gap: fill_gap
   - record: tikv_p99_copr_wait_dur:by_req
+    replace_name: tikv_p99_copr_wait_dur
     apply_agg: fill_gap
   - record: tikv_p99_copr_rt:by_req
+    replace_name: tikv_p99_copr_rt
     apply_agg: fill_gap
   - record: tikv_copr_thd_cpu_usage:by_instance
+    replace_name: tikv_copr_thd_cpu_usage
     apply_agg: fill_gap
   - record: tikv_avg_rocksdb_get_dur
   - record: tikv_p99_rocksdb_get_dur
   - record: tikv_get_cache_hit:memtable_hit
   - record: tikv_get_cache_hit:block_cache
   - record: tikv_get_served_ops:by_type
+    replace_name: tikv_get_served_ops
   - record: tikv_avg_rocksdb_seek_dur
   - record: tikv_p99_rocksdb_seek_dur
   - record: tikv_seek_ops:by_type
+    replace_name: tikv_seek_ops
   - record: tikv_block_cache_hit_ratio:all
   - record: tikv_block_cache_hit_ratio:data
   - record: tikv_block_cache_hit_ratio:filter
   - record: tikv_block_cache_hit_ratio:index
   - record: tikv_bloom_prefix_hit_ratio
   - record: node_disk_read_lat:by_instance:by_device
+    replace_name: node_disk_read_lat
     apply_agg: fill_gap
   - record: node_disk_read_ops:by_instance:by_device
+    replace_name: node_disk_read_ops
   - record: node_disk_read_bw:by_instance:by_device
+    replace_name: node_disk_read_bw
   - record: node_disk_read_dur:by_instance:by_device
+    replace_name: node_disk_read_dur
   - record: tidb_p999_kv_cmd_rt:commit
   - record: tidb_p99_kv_cmd_rt:commit
   - record: tikv_p99_rt:write:by_type
+    replace_name: tikv_p99_rt:write
   - record: tikv_p95_sched_latch_wait_dur:by_type
+    replace_name: tikv_p95_sched_latch_wait_dur
     apply_agg: fill_gap
   - record: tikv_avg_sched_latch_wait_dur:by_type
+    replace_name: tikv_avg_sched_latch_wait_dur
     apply_agg: fill_gap
   - record: tikv_sched_thd_cpu_usage:by_instance
+    replace_name: tikv_sched_thd_cpu_usage
   - record: tikv_p99_sched_cmd_dur:by_type
+    replace_name: tikv_p99_sched_cmd_dur
     apply_agg: fill_gap
   - record: tikv_p99_raftstore_req_wait_dur:by_instance
+    replace_name: tikv_p99_raftstore_req_wait_dur
     apply_agg: fill_gap
   - record: tikv_raftstore_thd_cpu_usage:by_instance
+    replace_name: tikv_raftstore_thd_cpu_usage
   - record: tikv_p99_raftstore_async_req_dur
   - record: tikv_avg_raftstore_async_req_dur
   - record: tikv_p99_raftstore_append_log_dur:by_instance
+    replace_name: tikv_p99_raftstore_append_log_dur
   - record: tikv_p99_rocksdb_write_dur:raft
   - record: tikv_avg_rocksdb_write_dur:raft
   - record: tikv_p99_raftstore_apply_wait_dur:by_instance
+    replace_name: tikv_p99_raftstore_apply_wait_dur
   - record: tikv_p99_raftstore_apply_log_dur
   - record: tikv_avg_raftstore_apply_log_dur
   - record: tikv_p99_rocksdb_write_dur:kv
   - record: tikv_avg_rocksdb_write_dur:kv
   - record: tikv_apply_thd_cpu_usage:by_instance
+    replace_name: tikv_apply_thd_cpu_usage
   - record: node_disk_write_lat:by_instance:by_device
-    -
+    replace_name: node_disk_write_lat
+    apply_agg: fill_gap
   - record: node_disk_write_ops:by_instance:by_device
+    replace_name: node_disk_write_ops
   - record: node_disk_write_bw:by_instance:by_device
+    replace_name: node_disk_write_bw
   - record: node_disk_write_dur:by_instance:by_device
+    replace_name: node_disk_write_dur

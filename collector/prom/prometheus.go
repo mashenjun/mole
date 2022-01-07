@@ -558,7 +558,7 @@ func parseTimeRange(scrapeStart, scrapeEnd string) ([]string, int64, error) {
 func injectTiDBClusterLabelMatcher(input string, clusterID string) (string, error) {
 	expr, err := parser.ParseExpr(input)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("parse %s error %w", input, err)
 	}
 	matcher, err := labels.NewMatcher(labels.MatchEqual, "tidb_cluster", clusterID)
 	if err != nil {

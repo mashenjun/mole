@@ -62,7 +62,7 @@ cooked:
   - record: tikv_grpc_thd_cpu_usage:by_instance:by_name
     expr: 'sum(rate(tikv_thread_cpu_seconds_total{name=~"grpc.*"}[1m]))by(instance)/sum(tikv_server_cpu_cores_quota)by(instance)'
     priority: 0x600
-# Storage panel Read TODO ratio by total cup time
+# Storage panel Read
   - record: tikv_readpool_thd_cpu_usage:by_instance
     expr: 'sum(rate(tikv_thread_cpu_seconds_total{name=~"store_read.*"}[1m]))by(instance)/sum(tikv_server_cpu_cores_quota)by(instance)'
     priority: 0x700
@@ -197,7 +197,7 @@ cooked:
     priority: 0xA00
 # Disk panel Write
   - record: node_disk_write_lat:by_instance:by_device
-    expr: 'sum(irate(node_disk_write_time_seconds_total[5m]))b(instance,device)/sum(irate(node_disk_writes_completed_total[5m]))by(instance,device)>0'
+    expr: 'sum(irate(node_disk_write_time_seconds_total[5m]))by(instance,device)/sum(irate(node_disk_writes_completed_total[5m]))by(instance,device)>0'
     priority: 0xB00
   - record: node_disk_write_ops:by_instance:by_device
     expr: 'sum(irate(node_disk_writes_completed_total[5m]))by(instance,device)'
