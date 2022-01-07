@@ -86,13 +86,15 @@ rules:
   - record: tikv_p99_sched_cmd_dur:by_type
     replace_name: tikv_p99_sched_cmd_dur
     apply_agg: fill_gap
-  - record: tikv_p99_raftstore_req_wait_dur:by_instance
-    replace_name: tikv_p99_raftstore_req_wait_dur
+  - record: tikv_p99_raftstore_propose_wait_dur:by_instance
+    replace_name: tikv_p99_raftstore_propose_wait_dur
     apply_agg: fill_gap
   - record: tikv_raftstore_thd_cpu_usage:by_instance
     replace_name: tikv_raftstore_thd_cpu_usage
-  - record: tikv_p99_raftstore_async_req_dur
-  - record: tikv_avg_raftstore_async_req_dur
+  - record: tikv_p99_raftstore_async_req_dur:by_type
+    replace_name: tikv_p99_raftstore_async_req_dur
+  - record: tikv_avg_raftstore_async_req_dur:by_type
+    replace_name: tikv_avg_raftstore_async_req_dur
   - record: tikv_p99_raftstore_append_log_dur:by_instance
     replace_name: tikv_p99_raftstore_append_log_dur
   - record: tikv_p99_rocksdb_write_dur:raft
@@ -114,3 +116,11 @@ rules:
     replace_name: node_disk_write_bw
   - record: node_disk_write_dur:by_instance:by_device
     replace_name: node_disk_write_dur
+  - record: node_net_out_traffic:by_instance:by_device
+    replace_name: node_net_out_traffic
+  - record: node_net_in_traffic:by_instance:by_device
+    replace_name: node_net_in_traffic
+  - record: node_net_out_packets:by_instance:by_device
+    replace_name: node_net_out_packets
+  - record: node_net_in_packets:by_instance:by_device
+    replace_name: node_net_in_packets

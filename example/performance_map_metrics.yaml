@@ -154,22 +154,26 @@ cooked:
     expr: 'histogram_quantile(0.99,sum(rate(tikv_scheduler_command_duration_seconds_bucket{type!=""}[1m]))by(le,type))>0'
     priority: 0x700
   # raftstore panel Write
-  - record: tikv_p99_raftstore_req_wait_dur:by_instance
+  - record: tikv_p99_raftstore_propose_wait_dur:by_instance
     expr: 'histogram_quantile(0.99,sum(rate(tikv_raftstore_request_wait_time_duration_secs_bucket[1m]))by(le,instance))>0'
     priority: 0x800
   - record: tikv_raftstore_thd_cpu_usage:by_instance
     expr: 'sum(rate(tikv_thread_cpu_seconds_total{name=~"raftstore_.*"}[1m]))by(instance)/sum(tikv_server_cpu_cores_quota)by(instance)'
     priority: 0x800
-  - record: tikv_p99_raftstore_async_req_dur
-    expr: 'label_replace(histogram_quantile(0.99,sum(rate(tikv_storage_engine_async_request_duration_seconds_bucket{type="write"}[5m]))by(le)),"name","duration","","")'
+  - record: tikv_p99_raftstore_async_req_dur:by_type
+    expr: 'histogram_quantile(0.99,sum(rate(tikv_storage_engine_async_request_duration_seconds_bucket{type=~"write|snapshot"}[5m]))by(le,type))'
     priority: 0x800
-  - record: tikv_avg_raftstore_async_req_dur
-    expr: 'sum(rate(tikv_storage_engine_async_request_duration_seconds_sum{type="write"}[5m]))/sum(rate(tikv_storage_engine_async_request_duration_seconds_count{type="write"}[5m]))'
+  # TODO: snapshot is not in performance write panel group.
+  - record: tikv_avg_raftstore_async_req_dur:by_type
+    expr: 'sum(rate(tikv_storage_engine_async_request_duration_seconds_sum{type=~"write|snapshot"}[5m]))by(type)/sum(rate(tikv_storage_engine_async_request_duration_seconds_count{type=~"write|snapshot"}[5m]))by(type)'
     priority: 0x800
   # RocksDB-Raft Write
   - record: tikv_p99_raftstore_append_log_dur:by_instance
     expr: 'histogram_quantile(0.99,sum(rate(tikv_raftstore_append_log_duration_seconds_bucket[1m]))by(le,instance))'
     priority: 0x900
+  - record: tikv_p99_raftstore_commit_log_dur:by_instance
+    expr: 'histogram_quantile(0.99, sum(rate(tikv_raftstore_commit_log_duration_seconds_bucket[1m]))by(le,instance))'
+    priority: 0x800
   - record: tikv_p99_rocksdb_write_dur:raft
     expr: 'max(tikv_engine_write_micro_seconds{db="raft",type="write_percentile99"})by(db,type)'
     priority: 0x900
@@ -195,7 +199,7 @@ cooked:
   - record: tikv_apply_thd_cpu_usage:by_instance
     expr: 'sum(rate(tikv_thread_cpu_seconds_total{name=~"apply_[0-9]+"}[1m]))by(instance)/sum(tikv_server_cpu_cores_quota)by(instance)'
     priority: 0xA00
-# Disk panel Write
+  # Disk panel Write
   - record: node_disk_write_lat:by_instance:by_device
     expr: 'sum(irate(node_disk_write_time_seconds_total[5m]))by(instance,device)/sum(irate(node_disk_writes_completed_total[5m]))by(instance,device)>0'
     priority: 0xB00
@@ -207,4 +211,17 @@ cooked:
     priority: 0xB00
   - record: node_disk_write_dur:by_instance:by_device
     expr: 'sum(irate(node_disk_write_time_seconds_total[5m]))by(instance,device)'
+    priority: 0xB00
+  # Network panel
+  - record: node_net_out_traffic:by_instance:by_device
+    expr: 'sum(irate(node_network_transmit_bytes_total{device!="lo"}[5m]))by(instance,device)'
+    priority: 0xB00
+  - record: node_net_in_traffic:by_instance:by_device
+    expr: 'sum(irate(node_network_receive_bytes_total{device!="lo"}[5m]))by(instance,device)'
+    priority: 0xB00
+  - record: node_net_out_packets:by_instance:by_device
+    expr: 'sum(irate(node_network_receive_packets_total{device!="lo"}[5m]))by(instance,device)'
+    priority: 0xB00
+  - record: node_net_in_packets:by_instance:by_device
+    expr: 'sum(irate(node_network_transmit_packets_total{device!="lo"}[5m]))by(instance,device)'
     priority: 0xB00
