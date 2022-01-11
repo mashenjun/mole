@@ -8,11 +8,11 @@ cooked:
   - record: tidb_p99_get_token_dur
     expr: 'label_replace(histogram_quantile(0.99,sum(rate(tidb_server_get_token_duration_seconds_bucket[1m]))by(le)),"name","duration","","")'
     priority: 0x0
-  - record: tidb_conn_cnt:by_instance
-    expr: 'sum(tidb_server_connections)by(instance)'
+  - record: tidb_conn_cnt:avg
+    expr: 'label_replace(avg(sum(tidb_server_connections)by(instance)),"name","counts","","")'
     priority: 0x0
-  - record: tidb_mem_usage:by_instance
-    expr: 'sum(label_replace(go_memstats_heap_inuse_bytes{job=~"tidb.*"},"ip","$1","instance","(.*):.*")/on(ip)group_left label_replace(node_memory_MemTotal_bytes,"ip", "$1","instance","(.*):.*"))by(instance)'
+  - record: tidb_mem_usage:avg
+    expr: 'label_replace(avg(label_replace(go_memstats_heap_inuse_bytes{job=~"tidb.*"},"ip","$1","instance","(.*):.*")/on(ip)group_left label_replace(node_memory_MemTotal_bytes,"ip", "$1","instance","(.*):.*")),"name","percentage",""，"")'
     priority: 0x0
 # Parse panel Read & Write
   - record: tidb_p99_parse_dur:by_sql_type
@@ -59,12 +59,12 @@ cooked:
   - record: tikv_p99_rt:read:by_type
     expr: 'histogram_quantile(0.99,sum(rate(tikv_grpc_msg_duration_seconds_bucket{type=~"kv_get|kv_batch_get|coprocessor"}[5m]))by(le,type))>0'
     priority: 0x600
-  - record: tikv_grpc_thd_cpu_usage:by_instance:by_name
-    expr: 'sum(rate(tikv_thread_cpu_seconds_total{name=~"grpc.*"}[1m]))by(instance)/sum(tikv_server_cpu_cores_quota)by(instance)'
+  - record: tikv_grpc_thd_cpu_usage:avg
+    expr: 'label_replace(sum(rate(tikv_thread_cpu_seconds_total{name=~"grpc.*"}[1m]))/sum(tikv_server_cpu_cores_quota),"name","percentage","","")'
     priority: 0x600
 # Storage panel Read
-  - record: tikv_readpool_thd_cpu_usage:by_instance
-    expr: 'sum(rate(tikv_thread_cpu_seconds_total{name=~"store_read.*"}[1m]))by(instance)/sum(tikv_server_cpu_cores_quota)by(instance)'
+  - record: tikv_readpool_thd_cpu_usage:avg
+    expr: 'label_replace(sum(rate(tikv_thread_cpu_seconds_total{name=~"store_read.*"}[1m]))/sum(tikv_server_cpu_cores_quota),"name","percentage","","")'
     priority: 0x700
 # Coprocessor panel Read
   - record: tikv_p99_copr_wait_dur:by_req
@@ -73,8 +73,8 @@ cooked:
   - record: tikv_p99_copr_rt:by_req
     expr: 'histogram_quantile(0.99,sum(rate(tikv_coprocessor_request_handle_seconds_bucket{req!=""}[1m]))by(le,req))>0'
     priority: 0x800
-  - record: tikv_copr_thd_cpu_usage:by_instance
-    expr: 'sum(rate(tikv_thread_cpu_seconds_total{name=~"cop_.*"}[1m]))by(instance)/sum(tikv_server_cpu_cores_quota)by(instance)'
+  - record: tikv_copr_thd_cpu_usage:avg
+    expr: 'label_replace(sum(rate(tikv_thread_cpu_seconds_total{name=~"cop_.*"}[1m]))/sum(tikv_server_cpu_cores_quota),"name","percentage","","")'
     priority: 0x800
 # RocksDB-KV panel Read
   - record: tikv_avg_rocksdb_get_dur
@@ -147,18 +147,18 @@ cooked:
   - record: tikv_avg_sched_latch_wait_dur:by_type
     expr: 'sum(rate(tikv_scheduler_latch_wait_duration_seconds_sum[5m]))by(type)/sum(rate(tikv_scheduler_latch_wait_duration_seconds_count[5m]))by(type)>0'
     priority: 0x700
-  - record: tikv_sched_thd_cpu_usage:by_instance
-    expr: 'sum(rate(tikv_thread_cpu_seconds_total{name=~"sched_.*"}[1m]))by(instance)/sum(tikv_server_cpu_cores_quota)by(instance)'
+  - record: tikv_sched_thd_cpu_usage:avg
+    expr: 'label_replace(sum(rate(tikv_thread_cpu_seconds_total{name=~"sched_.*"}[1m]))/sum(tikv_server_cpu_cores_quota),"name","percentage","","")'
     priority: 0x700
   - record: tikv_p99_sched_cmd_dur:by_type
     expr: 'histogram_quantile(0.99,sum(rate(tikv_scheduler_command_duration_seconds_bucket{type!=""}[1m]))by(le,type))>0'
     priority: 0x700
   # raftstore panel Write
-  - record: tikv_p99_raftstore_propose_wait_dur:by_instance
-    expr: 'histogram_quantile(0.99,sum(rate(tikv_raftstore_request_wait_time_duration_secs_bucket[1m]))by(le,instance))>0'
+  - record: tikv_p99_raftstore_propose_wait_dur
+    expr: 'label_replace(histogram_quantile(0.99,sum(rate(tikv_raftstore_request_wait_time_duration_secs_bucket[1m]))by(le))>0,"name","duration","","")'
     priority: 0x800
-  - record: tikv_raftstore_thd_cpu_usage:by_instance
-    expr: 'sum(rate(tikv_thread_cpu_seconds_total{name=~"raftstore_.*"}[1m]))by(instance)/sum(tikv_server_cpu_cores_quota)by(instance)'
+  - record: tikv_raftstore_thd_cpu_usage:avg
+    expr: 'label_replace(sum(rate(tikv_thread_cpu_seconds_total{name=~"raftstore_.*"}[1m]))/sum(tikv_server_cpu_cores_quota),"name","percentage","","")'
     priority: 0x800
   - record: tikv_p99_raftstore_async_req_dur:by_type
     expr: 'histogram_quantile(0.99,sum(rate(tikv_storage_engine_async_request_duration_seconds_bucket{type=~"write|snapshot"}[5m]))by(le,type))'
@@ -168,11 +168,11 @@ cooked:
     expr: 'sum(rate(tikv_storage_engine_async_request_duration_seconds_sum{type=~"write|snapshot"}[5m]))by(type)/sum(rate(tikv_storage_engine_async_request_duration_seconds_count{type=~"write|snapshot"}[5m]))by(type)'
     priority: 0x800
   # RocksDB-Raft Write
-  - record: tikv_p99_raftstore_append_log_dur:by_instance
-    expr: 'histogram_quantile(0.99,sum(rate(tikv_raftstore_append_log_duration_seconds_bucket[1m]))by(le,instance))'
+  - record: tikv_p99_raftstore_append_log_dur
+    expr: 'label_replace(histogram_quantile(0.99,sum(rate(tikv_raftstore_append_log_duration_seconds_bucket[1m]))by(le)),"name","duration","","")'
     priority: 0x900
-  - record: tikv_p99_raftstore_commit_log_dur:by_instance
-    expr: 'histogram_quantile(0.99, sum(rate(tikv_raftstore_commit_log_duration_seconds_bucket[1m]))by(le,instance))'
+  - record: tikv_p99_raftstore_commit_log_dur
+    expr: 'label_replace(histogram_quantile(0.99,sum(rate(tikv_raftstore_commit_log_duration_seconds_bucket[1m]))by(le)),"name","duration","","")'
     priority: 0x800
   - record: tikv_p99_rocksdb_write_dur:raft
     expr: 'max(tikv_engine_write_micro_seconds{db="raft",type="write_percentile99"})by(db,type)'
@@ -181,8 +181,8 @@ cooked:
     expr: 'max(tikv_engine_write_micro_seconds{db="raft",type="write_average"})by(db,type)'
     priority: 0x900
   # RocksDB-KV Write
-  - record: tikv_p99_raftstore_apply_wait_dur:by_instance
-    expr: 'histogram_quantile(0.99,sum(rate(tikv_raftstore_apply_wait_time_duration_secs_bucket[5m]))by(le,instance))'
+  - record: tikv_p99_raftstore_apply_wait_dur
+    expr: 'label_replace(histogram_quantile(0.99,sum(rate(tikv_raftstore_apply_wait_time_duration_secs_bucket[5m]))by(le)),"name","duration","","")'
     priority: 0xA00
   - record: tikv_p99_raftstore_apply_log_dur
     expr: 'label_replace(histogram_quantile(0.99,sum(rate(tikv_raftstore_apply_log_duration_seconds_bucket[1m]))by(le)),"name","duration","","")'
@@ -196,8 +196,8 @@ cooked:
   - record: tikv_avg_rocksdb_write_dur:kv
     expr: 'max(tikv_engine_write_micro_seconds{db="kv",type="write_average"})'
     priority: 0xA00
-  - record: tikv_apply_thd_cpu_usage:by_instance
-    expr: 'sum(rate(tikv_thread_cpu_seconds_total{name=~"apply_[0-9]+"}[1m]))by(instance)/sum(tikv_server_cpu_cores_quota)by(instance)'
+  - record: tikv_apply_thd_cpu_usage:avg
+    expr: 'label_replace(sum(rate(tikv_thread_cpu_seconds_total{name=~"apply_[0-9]+"}[1m]))/sum(tikv_server_cpu_cores_quota),"name","percentage","","")'
     priority: 0xA00
   # Disk panel Write
   - record: node_disk_write_lat:by_instance:by_device
