@@ -1,0 +1,164 @@
+---
+rules:
+  - record: write-rpc:total
+    priority: 0x00
+  - record: read-rpc:total
+    priority: 0x00
+  - record: write-rpc:by_instance
+    priority: 0x00
+  - record: read-rpc:by_instance
+    priority: 0x00
+  - record: get-rpc:total
+    priority: 0x00
+  - record: cop-rpc:total
+    priority: 0x00
+  - record: write-lat-p999:by_instance
+    priority: 0x00
+  - record: read-lat-p999:by_instance
+    priority: 0x00
+  - record: write-lat-p999:total
+    priority: 0x00
+  - record: write-lat-p99:total
+    priority: 0x00
+  - record: read-lat-p999:total
+    priority: 0x00
+  - record: read-lat-p99:total
+    priority: 0x00
+  - record: write-stall-dur-max
+    priority: 0x00
+  - record: write-stall-dur-p99
+    priority: 0x00
+  - record: copr-lat-p99:total
+    priority: 0x00
+  - record: copr-lat-p999:total
+    priority: 0x00
+  - record: latch-wait-dur-p999
+    priority: 0x00
+  - record: get-dur-p99
+    priority: 0x00
+  - record: get-dur-p999
+    priority: 0x00
+  - record: pending-bytes-kv
+    priority: 0x00
+  - record: pending-bytes-raft
+    priority: 0x00
+  - record: pending-bytes-kv:by_instance
+    priority: 0x00
+  - record: transfer-leader-opm
+    priority: 0x00
+  - record: move-peer-opm
+    priority: 0x00
+  - record: region-balancing-opm
+    priority: 0x00
+  - record: pd-worker-pending-task
+    priority: 0x00
+  - record: region-balancing-opm
+    priority: 0x00
+  - record: store-used:by_store
+    priority: 0x00
+  - record: node-cpu:by_instance
+    priority: 0x00
+  - record: wait-queue
+    priority: 0x00
+  - record: raftstore-request-wait-dur-p999
+    priority: 0x00
+  - record: raftstore-request-wait-dur-p99
+    priority: 0x00
+  - record: raftstore-apply-wait-dur-p999
+    priority: 0x00
+  - record: raftstore-apply-wait-dur-p99
+    priority: 0x00
+  - record: raftdb-write-dur-p99
+    priority: 0x00
+  - record: raftdb-write-dur-max
+    priority: 0x00
+  - record: kvdb-write-dur-p99
+    priority: 0x00
+  - record: kvdb-write-dur-max
+    priority: 0x00
+  - record: kvdb-write-flow
+    priority: 0x00
+  - record: kvdb-read-flow
+    priority: 0x00
+  - record: raftdb-write-flow
+    priority: 0x00
+  - record: raftdb-read-flow
+    priority: 0x00
+  - record: kvdb-compaction-flow:by_instance
+    priority: 0x00
+  - record: rocksdb-cpu:by_instance
+    priority: 0x00
+  - record: raftdb-batch-size-p99
+    priority: 0x00
+  - record: raftdb-batch-size-max
+    priority: 0x00
+  - record: kvdb-batch-size-p99
+    priority: 0x00
+  - record: kvdb-batch-size-max
+    priority: 0x00
+  - record: raftdb-mutex-lock-dur-p999:by_type
+    priority: 0x00
+  - record: raftdb-mutex-lock-dur-max:by_type
+    priority: 0x00
+  - record: kvdb-mutex-lock-dur-p999:by_type
+    priority: 0x00
+  - record: kvdb-mutex-lock-dur-max:by_type
+    priority: 0x00
+  - record: raftdb-frontend-write-flow
+    priority: 0x00
+  - record: raftdb-frontend-read-flow
+    priority: 0x00
+  - record: kvdb-frontend-write-flow
+    priority: 0x00
+  - record: kvdb-frontend-read-flow
+    priority: 0x00
+  - record: total-io-write-flow
+    priority: 0x00
+  - record: total-io-read-flow
+    priority: 0x00
+  - record: total-compaction-write-flow
+    priority: 0x00
+  - record: total-compaction-read-flow
+    priority: 0x00
+  - record: raftdb-wal-dur-p99
+    priority: 0x00
+  - record: raftdb-wal-dur-max
+    priority: 0x00
+  - record: copr-index-req
+    priority: 0x00
+  - record: copr-select-req
+    priority: 0x00
+  - record: copr-index-dur-p99
+    priority: 0x00
+  - record: copr-select-dur-p99
+    priority: 0x00
+  - record: copr-wait-dur-p99
+    priority: 0x00
+  - record: copr-wait-dur-p999
+    priority: 0x00
+  - record: copr-wait-queue
+    priority: 0x00
+  - record: copr-scan-number
+    priority: 0x00
+  - record: kvdb-read-dur-p99
+    priority: 0x00
+  - record: kvdb-read-dur-max
+    priority: 0x00
+  - record: kvdb-deleted-skipped-count
+    priority: 0x00
+  - record: kvdb-read-sst-dur-p99
+    priority: 0x00
+  - record: kvdb-read-sst-dur-max
+    priority: 0x00
+  - record: raftstore-fall-to-raft-rate
+    priority: 0x00
+  - record: kvdb-data-miss-rate
+    priority: 0x00
+  - record: kvdb-seek-count
+    priority: 0x00
+  - record: kvdb-seek-dur-p99
+    priority: 0x00
+  - record: kvdb-seek-dur-max
+    priority: 0x00
+  - record: kvdb-hit-sst-count
+    priority: 0x00

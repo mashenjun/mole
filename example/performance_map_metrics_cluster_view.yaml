@@ -12,7 +12,7 @@ cooked:
     expr: 'label_replace(avg(sum(tidb_server_connections)by(instance)),"name","counts","","")'
     priority: 0x0
   - record: tidb_mem_usage:avg
-    expr: 'label_replace(avg(label_replace(go_memstats_heap_inuse_bytes{job=~"tidb.*"},"ip","$1","instance","(.*):.*")/on(ip)group_left label_replace(node_memory_MemTotal_bytes,"ip", "$1","instance","(.*):.*")),"name","percentage",""，"")'
+    expr: 'label_replace(avg(label_replace(go_memstats_heap_inuse_bytes{job=~"tidb.*"},"ip","$1","instance","(.*):.*")/on(ip)group_left label_replace(node_memory_MemTotal_bytes,"ip", "$1","instance","(.*):.*")),"name","percentage","","")'
     priority: 0x0
 # Parse panel Read & Write
   - record: tidb_p99_parse_dur:by_sql_type
