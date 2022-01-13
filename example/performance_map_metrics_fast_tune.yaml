@@ -22,7 +22,7 @@ cooked:
     expr: 'histogram_quantile(0.999,sum(rate(tikv_grpc_msg_duration_seconds_bucket{type=~"kv_prewrite|kv_commit|kv_pessimistic_lock"}[1m]))by(le,instance))'
 # Some instances read too slow?
   - record: read-lat-p999:by_instance
-    expr: 'histogram_quantile(0.999,sum(rate(type=~"kv_get|kv_scan|kv_batch_get|kv_batch_get_command|coprocessor"}[1m]))by(le,instance))'
+    expr: 'histogram_quantile(0.999,sum(rate(tikv_grpc_msg_duration_seconds_bucket{type=~"kv_get|kv_scan|kv_batch_get|kv_batch_get_command|coprocessor"}[1m]))by(le,instance))'
 # Write-RPC too slow?
   - record: write-lat-p999:total
     expr: 'label_replace(histogram_quantile(0.999,sum(rate(tikv_grpc_msg_duration_seconds_bucket{type=~"kv_prewrite|kv_commit|kv_pessimistic_lock"}[1m]))by(le)),"name","duration","","")'
