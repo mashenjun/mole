@@ -1,0 +1,215 @@
+---
+raw:
+cooked:
+  - record: write-rpc:total
+    expr: 'label_replace(sum(rate(tikv_grpc_msg_duration_seconds_count{type=~"kv_prewrite|kv_commit|kv_pessimistic_lock"}[1m])),"name","qps","","")'
+  - record: read-rpc:total
+    expr: 'label_replace(sum(rate(tikv_grpc_msg_duration_seconds_count{type=~"kv_get|kv_scan|kv_batch_get|kv_batch_get_command|coprocessor"}[1m])),"name","qps","","")'
+# Imbalance write?
+  - record: write-rpc:by_instance
+    expr: 'sum(rate(tikv_grpc_msg_duration_seconds_count{type=~"kv_prewrite|kv_commit|kv_pessimistic_lock"}[1m]))by(instance)'
+# Imbalance read?
+  - record: read-rpc:by_instance
+    expr: 'sum(rate(tikv_grpc_msg_duration_seconds_count{type=~"kv_get|kv_scan|kv_batch_get|kv_batch_get_command|coprocessor"}[1m]))by(instance)'
+# BatchGet-RPC & Get-RPC QPS Follow Write-RPC?
+  - record: get-rpc:total
+    expr: 'label_replace(sum(rate(tikv_grpc_msg_duration_seconds_count{type=~"kv_batch_get|kv_batch_get_command|kv_get|kv_scan"}[1m])),"name","qps","","")'
+# Coprocessor-RPC QPS Follow Write-RPC?
+  - record: cop-rpc:total
+    expr: 'label_replace(sum(rate(tikv_grpc_msg_duration_seconds_count{type=~"coprocessor"}[1m])),"name","qps","","")'
+# Some instances write too slow?
+  - record: write-lat-p999:by_instance
+    expr: 'histogram_quantile(0.999,sum(rate(tikv_grpc_msg_duration_seconds_bucket{type=~"kv_prewrite|kv_commit|kv_pessimistic_lock"}[1m]))by(le,instance))'
+# Some instances read too slow?
+  - record: read-lat-p999:by_instance
+    expr: 'histogram_quantile(0.999,sum(rate(type=~"kv_get|kv_scan|kv_batch_get|kv_batch_get_command|coprocessor"}[1m]))by(le,instance))'
+# Write-RPC too slow?
+  - record: write-lat-p999:total
+    expr: 'label_replace(histogram_quantile(0.999,sum(rate(tikv_grpc_msg_duration_seconds_bucket{type=~"kv_prewrite|kv_commit|kv_pessimistic_lock"}[1m]))by(le)),"name","duration","","")'
+  - record: write-lat-p99:total
+    expr: 'label_replace(histogram_quantile(0.99,sum(rate(tikv_grpc_msg_duration_seconds_bucket{type=~"kv_prewrite|kv_commit|kv_pessimistic_lock"}[1m]))by(le)),"name","duration","","")'
+# Read-RPC too slow?
+  - record: read-lat-p999:total
+    expr: 'label_replace(histogram_quantile(0.999,sum(rate(tikv_grpc_msg_duration_seconds_bucket{type=~"kv_get|kv_scan|kv_batch_get|kv_batch_get_command|coprocessor"}[1m]))by(le)),"name","duration","","")'
+  - record: read-lat-p99:total
+    expr: 'label_replace(histogram_quantile(0.99,sum(rate(tikv_grpc_msg_duration_seconds_bucket{type=~"kv_get|kv_scan|kv_batch_get|kv_batch_get_command|coprocessor"}[1m]))by(le)),"name","duration","","")'
+# Has write stall?
+  - record: write-stall-dur-max
+    expr: 'label_replace(max(tikv_engine_write_stall{type="write_stall_max"}),"name","duration","","")'
+  - record: write-stall-dur-p99
+    expr: 'label_replace(max(tikv_engine_write_stall{type="write_stall_percentile99"}),"name","duration","","")'
+# Coprocessor-RPC too slow?
+  - record: copr-lat-p99:total
+    expr: 'label_replace(histogram_quantile(0.99,sum(rate(tikv_grpc_msg_duration_seconds_bucket{type=~"coprocessor"}[1m]))by(le)),"name","duration","","")'
+  - record: copr-lat-p999:total
+    expr: 'label_replace(histogram_quantile(0.999,sum(rate(tikv_grpc_msg_duration_seconds_bucket{type=~"coprocessor"}[1m]))by(le)),"name","duration","","")'
+# Latch wait too long?
+  - record: latch-wait-dur-p999
+    expr: 'label_replace(histogram_quantile(0.999,sum(rate(tikv_scheduler_latch_wait_duration_seconds_bucket{type=~"prewrite|commit|acquire_pessimistic_lock"}[1m]))by(le)),"name","duration","","")'
+# BatchGet-RPC or Get-RPC too slow?
+  - record: get-dur-p99
+    expr: 'label_replace(histogram_quantile(0.99,sum(rate(tikv_grpc_msg_duration_seconds_bucket{type=~"kv_batch_get|kv_batch_get_command|kv_get|kv_scan"}[1m]))by(le)),"name","duration","","")'
+  - record: get-dur-p999
+    expr: 'label_replace(histogram_quantile(0.999,sum(rate(tikv_grpc_msg_duration_seconds_bucket{type=~"kv_batch_get|kv_batch_get_command|kv_get|kv_scan"}[1m]))by(le)),"name","duration","","")'
+# Too many compaction pending bytes accumulating?
+  - record: pending-bytes-kv
+    expr: 'label_replace(sum(tikv_engine_pending_compaction_bytes{db="kv"}),"name","bytes","","")'
+  - record: pending-bytes-raft
+    expr: 'label_replace(sum(tikv_engine_pending_compaction_bytes{db="raft"}),"name","bytes","","")'
+# Some instance's KVDB compaction pending bytes accumulating?
+  - record: pending-bytes-kv:by_instance
+    expr: 'sum(tikv_engine_pending_compaction_bytes{db="kv"})by(instance)'
+# PD has too many scheduling operations?
+  - record: transfer-leader-opm
+    expr: 'label_replace(sum(delta(pd_schedule_operators_count{event="finish",type=~"transfer-hot-read-leader|transfer-hot-write-leader|balance-leader"}[1m])),"name","counts","","")'
+  - record: move-peer-opm
+    expr: 'label_replace(sum(delta(pd_schedule_operators_count{event="finish",type=~"balance-region|move-hot-write-peer|move-hot-read-peer|make-up-replica"}[1m])),"name","counts","","")'
+# PD region balancing caused jitter?
+  - record: region-balancing-opm
+    expr: 'label_replace(sum(delta(pd_schedule_operators_count{event="finish",type=~"balance-region"}[1m])),"name","counts","","")'
+# PD client has a lot pending tasks?
+  - record: pd-worker-pending-task
+    expr: 'label_replace(sum(rate(tikv_worker_pending_task_total{name="pd-worker"}[1m])),"name","counts","","")'
+# PD region balancing reason
+  - record: region-balancing-opm
+    expr: 'label_replace(sum(delta(pd_schedule_operators_count{event="finish",type=~"balance-region"}[1m])),"name","counts","","")'
+  - record: store-used:by_store
+    expr: '1-sum(pd_scheduler_store_status{type="store_available"})by(store)/sum(pd_scheduler_store_status{type="store_capacity"})by(store)'
+# Some instances' CPU usage have jitter?
+  - record: node-cpu:by_instance
+    expr: '100-avg by(instance)(irate(node_cpu_seconds_total{mode="idle"}[1m]))*100'
+# Wait for available scheduler threads?
+  - record: wait-queue
+    expr: 'label_replace(sum(rate(tikv_futurepool_pending_task_total{name=~"sched-worker-pool"}[1m])),"name","counts","","")'
+# Wait for available raftstore threads?
+  - record: raftstore-request-wait-dur-p999
+    expr: 'label_replace(histogram_quantile(0.999,sum(rate(tikv_raftstore_request_wait_time_duration_secs_bucket{}[1m]))by(le)),"name","seconds","","")'
+  - record: raftstore-request-wait-dur-p99
+    expr: 'label_replace(histogram_quantile(0.99,sum(rate(tikv_raftstore_request_wait_time_duration_secs_bucket{}[1m]))by(le)),"name","seconds","","")'
+# Wait for available apply threads?
+  - record: raftstore-apply-wait-dur-p999
+    expr: 'label_replace(histogram_quantile(0.999,sum(rate(tikv_raftstore_apply_wait_time_duration_secs_bucket{}[1m]))by(le)),"name","counts","","")'
+  - record: raftstore-apply-wait-dur-p99
+    expr: 'label_replace(histogram_quantile(0.99,sum(rate(tikv_raftstore_apply_wait_time_duration_secs_bucket{}[1m]))by(le)),"name","counts","","")'
+# RaftDB write too slow?
+  - record: raftdb-write-dur-p99
+    expr: 'label_replace(avg(tikv_engine_write_micro_seconds{db="raft",type="write_percentile99"}),"name","seconds","","")'
+  - record: raftdb-write-dur-max
+    expr: 'label_replace(avg(tikv_engine_write_micro_seconds{db="raft",type="write_max"}),"name","seconds","","")'
+# KVDB write too slow?
+  - record: kvdb-write-dur-p99
+    expr: 'label_replace(avg(tikv_engine_write_micro_seconds{db="kv",type="write_percentile99"}),"name","seconds","","")'
+  - record: kvdb-write-dur-max
+    expr: 'label_replace(avg(tikv_engine_write_micro_seconds{db="kv",type="write_max"}),"name","seconds","","")'
+# KVDB compaction flow has jitter?
+  - record: kvdb-write-flow
+    expr: 'label_replace(sum(rate(tikv_engine_flow_bytes{db="kv",type="flush_write_bytes"}[1m]))+sum(rate(tikv_engine_compaction_flow_bytes{db="kv",type="bytes_written"}[1m])),"name","bytes","","")'
+  - record: kvdb-read-flow
+    expr: 'label_replace(sum(rate(tikv_engine_compaction_flow_bytes{db="kv",type="bytes_read"}[1m])),"name","bytes","","")'
+# RaftDB compaction flow has jitter?
+  - record: raftdb-write-flow
+    expr: 'label_replace(sum(rate(tikv_engine_flow_bytes{db="raft",type="flush_write_bytes"}[1m]))+sum(rate(tikv_engine_compaction_flow_bytes{db="raft",type="bytes_written"}[1m])),"name","bytes","","")'
+  - record: raftdb-read-flow
+    expr: 'label_replace(sum(rate(tikv_engine_compaction_flow_bytes{db="raft",type="bytes_read"}[1m])),"name","bytes","","")'
+# Some instances' KVDB compaction flow has jitter?
+  - record: kvdb-compaction-flow:by_instance
+    expr: 'sum(rate(tikv_engine_flow_bytes{db="kv",type="flush_write_bytes"}[1m]))by(instance)+sum(rate(tikv_engine_compaction_flow_bytes{db="kv",type="bytes_written"}[1m]))by(instance)+sum(rate(tikv_engine_compaction_flow_bytes{db="kv",type="bytes_read"}[1m]))by(instance)'
+# RocksDB CPU usage has jitter?
+  - record: rocksdb-cpu:by_instance
+    expr: 'sum(rate(tikv_thread_cpu_seconds_total{name=~"rocksdb.*"}[1m]))by(instance)'
+# RaftDB write batch too big?
+  - record: raftdb-batch-size-p99
+    expr: 'label_replace(avg(tikv_engine_bytes_per_write{db="raft",type="bytes_per_write_percentile99"}),"name","bytes","","")'
+  - record: raftdb-batch-size-max
+    expr: 'label_replace(avg(tikv_engine_bytes_per_write{db="raft",type="bytes_per_write_max"}),"name","bytes","","")'
+# KVDB write batch too big?
+  - record: kvdb-batch-size-p99
+    expr: 'label_replace(avg(tikv_engine_bytes_per_write{db="raft",type="bytes_per_write_percentile99"}),"name","bytes","","")'
+  - record: kvdb-batch-size-max
+    expr: 'label_replace(avg(tikv_engine_bytes_per_write{db="raft",type="bytes_per_write_max"}),"name","bytes","","")'
+# RaftDB mutex lock too long?
+  - record: raftdb-mutex-lock-dur-p999:by_type
+    expr: 'histogram_quantile(0.999,sum(rate(tikv_raftstore_store_perf_context_time_duration_secs_bucket{type=~"db_mutex_lock_nanos|write_thread_wait"}[1m]))by(le,type))'
+  - record: raftdb-mutex-lock-dur-max:by_type
+    expr: 'histogram_quantile(1,sum(rate(tikv_raftstore_store_perf_context_time_duration_secs_bucket{type=~"db_mutex_lock_nanos|write_thread_wait"}[1m]))by(le,type))'
+# KVDB mutex lock too long?
+  - record: kvdb-mutex-lock-dur-p999:by_type
+    expr: 'histogram_quantile(0.999,sum(rate(tikv_raftstore_apply_perf_context_time_duration_secs_bucket{type=~"db_mutex_lock_nanos|write_thread_wait"}[1m]))by(le,type))'
+  - record: kvdb-mutex-lock-dur-max:by_type
+    expr: 'histogram_quantile(1,sum(rate(tikv_raftstore_apply_perf_context_time_duration_secs_bucket{type=~"db_mutex_lock_nanos|write_thread_wait"}[1m]))by(le,type))'
+# RaftDB frontend flow has jitter?
+  - record: raftdb-frontend-write-flow
+    expr: 'label_replace(sum(rate(tikv_engine_flow_bytes{db="raft",type="wal_file_bytes"}[1m])),"name","bytes","","")'
+  - record: raftdb-frontend-read-flow
+    expr: 'label_replace(sum(rate(tikv_engine_flow_bytes{db="raft",type="bytes_read"}[1m]))+sum(rate(tikv_engine_flow_bytes{db="raft",type="iter_bytes_read"}[1m])),"name","bytes","","")'
+# KVDB frontend flow has jitter?
+  - record: kvdb-frontend-write-flow
+    expr: 'label_replace(sum(rate(tikv_engine_flow_bytes{db="kv",type="wal_file_bytes"}[1m])),"name","bytes","","")'
+  - record: kvdb-frontend-read-flow
+    expr: 'label_replace(sum(rate(tikv_engine_flow_bytes{db="kv",type="bytes_read"}[1m]))+sum(rate(tikv_engine_flow_bytes{db="kv",type="iter_bytes_read"}[1m])),"name","bytes","","")'
+# Total IO flow has jitter?
+  - record: total-io-write-flow
+    expr: 'label_replace(sum(rate(tikv_engine_flow_bytes{db="kv",type="flush_write_bytes"}[1m]))+sum(rate(tikv_engine_flow_bytes{db="raft",type="flush_write_bytes"}[1m]))+sum(rate(tikv_engine_compaction_flow_bytes{db="kv",type="bytes_written"}[1m]))+sum(rate(tikv_engine_compaction_flow_bytes{type="bytes_written"}[1m]))+sum(rate(tikv_engine_flow_bytes{db="kv",type="wal_file_bytes"}[1m]))+sum(rate(tikv_engine_flow_bytes{db="raft",type="wal_file_bytes"}[1m])),"name","bytes","","")'
+  - record: total-io-read-flow
+    expr: 'label_replace(sum(rate(tikv_engine_compaction_flow_bytes{db="kv",type="bytes_read"}[1m]))+sum(rate(tikv_engine_compaction_flow_bytes{db="raft",type="bytes_read"}[1m]))+sum(rate(tikv_engine_flow_bytes{db="kv",type="bytes_read"}[1m]))+sum(rate(tikv_engine_flow_bytes{db="raft",type="bytes_read"}[1m]))+sum(rate(tikv_engine_flow_bytes{db="kv",type="iter_bytes_read"}[1m]))+sum(rate(tikv_engine_flow_bytes{db="raft",type="iter_bytes_read"}[1m])),"name","bytes","","")'
+# Total compaction flow has jitter?
+  - record: total-compaction-write-flow
+    expr: 'label_replace(sum(rate(tikv_engine_flow_bytes{db="kv",type="flush_write_bytes"}[1m]))+sum(rate(tikv_engine_flow_bytes{db="raft",type="flush_write_bytes"}[1m]))+sum(rate(tikv_engine_compaction_flow_bytes{db="kv",type="bytes_written"}[1m]))+sum(rate(tikv_engine_compaction_flow_bytes{db="raft",type="bytes_written"}[1m])),"name","bytes","","")'
+  - record: total-compaction-read-flow
+    expr: 'label_replace(sum(rate(tikv_engine_compaction_flow_bytes{db="kv",type="bytes_read"}[1m]))+sum(rate(tikv_engine_compaction_flow_bytes{db="raft",type="bytes_read"}[1m])),"name","bytes","","")'
+# RaftDB sync WAL too slow?
+  - record: raftdb-wal-dur-p99
+    expr: 'label_replace(avg(tikv_engine_wal_file_sync_micro_seconds{db="raft",type="wal_file_sync_percentile99"}),"name","seconds","","")'
+  - record: raftdb-wal-dur-max
+    expr: 'label_replace(avg(tikv_engine_wal_file_sync_micro_seconds{db="raft",type="wal_file_sync_max"}),"name","seconds","","")'
+# Too much coprocessor requests?
+  - record: copr-index-req
+    expr: 'label_replace(sum(rate(tikv_coprocessor_request_duration_seconds_count{req="index"}[1m])),"name","counts","","")'
+  - record: copr-select-req
+    expr: 'label_replace(sum(rate(tikv_coprocessor_request_duration_seconds_count{req="select"}[1m])),"name","counts","","")'
+# Coprocessor handle too slow?
+  - record: copr-index-dur-p99
+    expr: 'label_replace(histogram_quantile(0.99,sum(rate(tikv_coprocessor_request_handle_seconds_bucket{req=~"index"}[1m]))by(le)),"name","seconds","","")'
+  - record: copr-select-dur-p99
+    expr: 'label_replace(histogram_quantile(0.99,sum(rate(tikv_coprocessor_request_handle_seconds_bucket{req=~"select"}[1m]))by(le)),"name","seconds","","")'
+# Wait for available coprocessor threads in lat view?
+  - record: copr-wait-dur-p99
+    expr: 'label_replace(histogram_quantile(0.99,sum(rate(tikv_coprocessor_request_wait_seconds_bucket{req=~"select|index"}[1m]))by(le)),"name","seconds","","")'
+  - record: copr-wait-dur-p999
+    expr: 'label_replace(histogram_quantile(0.999,sum(rate(tikv_coprocessor_request_wait_seconds_bucket{req=~"select|index"}[1m]))by(le)),"name","seconds","","")'
+# Wait for available coprocessor threads in queue view?
+  - record: copr-wait-queue
+    expr: 'label_replace(sum(rate(tikv_futurepool_pending_task_total{name=~"cop-normal"}[1m])),"name","counts","","")'
+# Coprocessor scan too much?
+  - record: copr-scan-number
+    expr: 'label_replace(sum(rate(tikv_coprocessor_scan_details{req=~"select|index",cf="default"}[1m]))+sum(rate(tikv_coprocessor_scan_details{req=~"select|index",cf="write"}[1m])),"name","seconds","","")'
+# KVDB read too slow?
+  - record: kvdb-read-dur-p99
+    expr: 'label_replace(avg(tikv_engine_get_micro_seconds{db="kv",type="get_percentile99"}),"name","seconds","","")'
+  - record: kvdb-read-dur-max
+    expr: 'label_replace(avg(tikv_engine_get_micro_seconds{db="kv",type="get_max"}),"name","seconds","","")'
+# KVDB scan too much deleted data?
+  - record: kvdb-deleted-skipped-count
+    expr: 'label_replace(sum(rate(tikv_coprocessor_rocksdb_perf{metric="internal_delete_skipped_count"}[1m])),"name","counts","","")'
+# KVDB read SST too slow?
+  - record: kvdb-read-sst-dur-p99
+    expr: 'label_replace(avg(tikv_engine_sst_read_micros{db="kv",type="sst_read_micros_percentile99"}),"name","seconds","","")'
+  - record: kvdb-read-sst-dur-max
+    expr: 'label_replace(avg(tikv_engine_sst_read_micros{db="kv",type="sst_read_micros_max"}),"name","seconds","","")'
+# Too much get-request fall to raftstore?
+  - record: raftstore-fall-to-raft-rate
+    expr: 'label_replace(sum(rate(tikv_raftstore_proposal_total{type=~"local_read|read_index"}[1m]))/sum(rate(tikv_grpc_msg_duration_seconds_count{type=~"kv_commit|kv_prewrite|kv_pessimistic_lock|kv_get|kv_scan|kv_batch_get|kv_batch_get_command|coprocessor"}[1m])),"name","qps","","")'
+# KVDB block cache miss?
+  - record: kvdb-data-miss-rate
+    expr: 'label_replace(sum(rate(tikv_engine_cache_efficiency{db="kv",type="block_cache_data_miss"}[1m]))/(sum(rate(tikv_engine_cache_efficiency{db="kv",type="block_cache_data_hit"}[1m]))+sum(rate(tikv_engine_cache_efficiency{db="kv",type="block_cache_data_miss"}[1m]))),"name","qps","","")'
+# KVDB seek too much times?
+  - record: kvdb-seek-count
+    expr: 'label_replace(sum(rate(tikv_engine_locate{db="kv",type="number_db_next"}[1m])),"name","counts","","")'
+# KVDB seek too slow?
+  - record: kvdb-seek-dur-p99
+    expr: 'label_replace(avg(tikv_engine_seek_micro_seconds{db="kv",type="seek_percentile99"}),"name","seconds","","")'
+  - record: kvdb-seek-dur-max
+    expr: 'label_replace(avg(tikv_engine_seek_micro_seconds{db="kv",type="seek_max"}),"name","seconds","","")'
+# KVDB read too much SSTs?
+  - record: kvdb-hit-sst-count
+    expr: 'label_replace(sum(rate(tikv_engine_get_served{db="kv",type=~"get_hit_l2_and_up|get_hit_l1"}[1m])),"name","counts","","")'

@@ -170,7 +170,7 @@ cooked:
   # RocksDB-Raft Write
   - record: tikv_p99_raftstore_append_log_dur:by_instance
     expr: 'histogram_quantile(0.99,sum(rate(tikv_raftstore_append_log_duration_seconds_bucket[1m]))by(le,instance))'
-    priority: 0x900
+    priority: 0x800
   - record: tikv_p99_raftstore_commit_log_dur:by_instance
     expr: 'histogram_quantile(0.99, sum(rate(tikv_raftstore_commit_log_duration_seconds_bucket[1m]))by(le,instance))'
     priority: 0x800
