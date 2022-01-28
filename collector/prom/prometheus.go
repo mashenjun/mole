@@ -4,13 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/mashenjun/mole/consts"
-	"github.com/mashenjun/mole/utils"
-	"github.com/pingcap/tiup/pkg/cliutil/progress"
-	tiuputils "github.com/pingcap/tiup/pkg/utils"
-	"github.com/prometheus/common/model"
-	"github.com/prometheus/prometheus/model/labels"
-	"github.com/prometheus/prometheus/promql/parser"
 	"io"
 	"math"
 	"net/http"
@@ -23,6 +16,16 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/mashenjun/mole/consts"
+	"github.com/mashenjun/mole/utils"
+	"github.com/pingcap/log"
+	"github.com/pingcap/tiup/pkg/cliutil/progress"
+	tiuputils "github.com/pingcap/tiup/pkg/utils"
+	"github.com/prometheus/common/model"
+	"github.com/prometheus/prometheus/model/labels"
+	"github.com/prometheus/prometheus/promql/parser"
+	"go.uber.org/zap"
 )
 
 //const (
@@ -212,7 +215,8 @@ func (c *MetricsCollect) Prepare(topo []Endpoint) (map[string][]CollectStat, err
 		for i := range c.targetRecord {
 			expr, err := injectTiDBClusterLabelMatcher(c.targetRecord[i].Expr, c.clusterID)
 			if err != nil {
-				return nil, err
+				log.Warn("inject label failed, skip this metrics", zap.String("expr", c.targetRecord[i].Expr))
+				continue
 			}
 			c.targetRecord[i].Expr = expr
 		}
@@ -326,6 +330,7 @@ func (c *MetricsCollect) getMetricsList(ep Endpoint) ([]string, error) {
 	if !fillMetricsName {
 		return c.rawMetrics, nil
 	}
+	// log.Info("getMetricsList api", zap.String("path", fmt.Sprintf("%s%s", ep.Address(), ep.WithPrefixPath(consts.PromPathLabelList))))
 	resp, err := c.cli.Get(fmt.Sprintf("%s%s", ep.Address(), ep.WithPrefixPath(consts.PromPathLabelList)))
 	if err != nil {
 		return nil, err
@@ -558,6 +563,7 @@ func parseTimeRange(scrapeStart, scrapeEnd string) ([]string, int64, error) {
 func injectTiDBClusterLabelMatcher(input string, clusterID string) (string, error) {
 	expr, err := parser.ParseExpr(input)
 	if err != nil {
+		log.Error("parse expr failed", zap.String("input", input), zap.Error(err))
 		return "", fmt.Errorf("parse %s error %w", input, err)
 	}
 	matcher, err := labels.NewMatcher(labels.MatchEqual, "tidb_cluster", clusterID)
