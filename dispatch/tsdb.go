@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// just to fit tsdb.Open() signature
 type NoopLogger struct{}
 
 func (nlg *NoopLogger) Log(keyvals ...interface{}) error {
@@ -27,7 +28,7 @@ func NewTSDBBlockDispatcher(dir string, source <-chan proto.MetricsSampleMsg) (*
 }
 
 func (bd *TSDBBlockDispatcher) Start(ctx context.Context) error {
-	db, err :=  tsdb.Open(bd.outputDir, &NoopLogger{}, nil, &tsdb.Options{
+	db, err := tsdb.Open(bd.outputDir, &NoopLogger{}, nil, &tsdb.Options{
 		RetentionDuration: int64(3650 * 24 * time.Hour / time.Millisecond),
 		MinBlockDuration:  int64(2 * time.Hour / time.Millisecond),
 	}, tsdb.NewDBStats())
@@ -47,7 +48,7 @@ func (bd *TSDBBlockDispatcher) Start(ctx context.Context) error {
 				}
 				return nil
 			}
-			ts := ms.Timestamp.UnixNano()/1e6
+			ts := ms.Timestamp.UnixNano() / 1e6
 			if _, err := app.Append(0, ms.Labels, ts, float64(ms.Value)); err != nil {
 				return err
 			}
