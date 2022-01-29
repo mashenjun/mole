@@ -5,6 +5,7 @@ go 1.16
 require (
 	github.com/cznic/mathutil v0.0.0-20181122101859-297441e03548
 	github.com/go-sql-driver/mysql v1.6.0
+	github.com/golang/snappy v0.0.4 // indirect
 	github.com/gorilla/schema v1.2.0
 	github.com/pingcap/errors v0.11.5-0.20200917111840-a15ef68f753d
 	github.com/pingcap/log v0.0.0-20211215031037-e024ba4eb0ee
