@@ -136,9 +136,9 @@ func (c *MetricsMatrixConvertor) dropGapAndSink(b []byte) error {
 	if err := json.Unmarshal(b, &resp); err != nil {
 		return err
 	}
-	matrix, ok := resp.Data.v.(model.Matrix)
-	if !ok {
-		return fmt.Errorf("type %t is not supported", resp.Data.v)
+	matrix, err := resp.Data.ToMatrix()
+	if err != nil {
+		return err
 	}
 	if !c.headerSend {
 		header := c.extractHeader(matrix)

@@ -1,4 +1,4 @@
-package prom
+package proto
 
 import (
 	"encoding/json"

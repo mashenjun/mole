@@ -35,6 +35,7 @@ func splitCmd() *cobra.Command {
 
 			ds, err := os.ReadDir(inputDir)
 			if err != nil {
+				fmt.Printf("ReadDir err: %+v\n", err)
 				return err
 			}
 			errG, ctx := errgroup.WithContext(context.Background())
@@ -50,7 +51,7 @@ func splitCmd() *cobra.Command {
 					keyviz.WithSplit(),
 				)
 				if err != nil {
-					fmt.Printf("new NewHeatmapConvertor error: %v\n", err)
+					fmt.Printf("new HeatmapConvertor error: %v\n", err)
 					return err
 				}
 				if len(filters) > 0 {

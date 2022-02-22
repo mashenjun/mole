@@ -1,9 +1,17 @@
 package main
 
 import (
+	"github.com/pingcap/log"
 	"github.com/spf13/cobra"
+	"go.uber.org/zap/zapcore"
 	"os"
 )
+
+func init() {
+	if os.Getenv("DEBUG") == "1" {
+		log.SetLevel(zapcore.DebugLevel)
+	}
+}
 
 func main() {
 	if err := command().Execute(); err != nil {
@@ -32,6 +40,7 @@ func command() *cobra.Command {
 		convertCmd(),
 		reshapeCmd(),
 		splitCmd(),
+		rebuildCmd(),
 	)
 	return cmd
 }

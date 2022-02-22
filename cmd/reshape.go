@@ -31,9 +31,9 @@ func reshapeCmd() *cobra.Command {
 		Short: `reshape multiple metrics to csv files`,
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			if len(inputDir) == 0 || len(outputDir) == 0 || len(ruleFile) == 0 {
-				fmt.Println("input or output or cookbook is not provided")
+				fmt.Println("input or output or rule is not provided")
 				_ = cmd.Help()
-				return errors.New("input or output or cookbook is not provided")
+				return errors.New("input or output or rule is not provided")
 			}
 			return nil
 		},

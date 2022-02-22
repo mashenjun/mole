@@ -2,12 +2,12 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/mashenjun/mole/convertor"
 	"github.com/mashenjun/mole/convertor/keyviz"
 	"github.com/mashenjun/mole/convertor/prom"
 	"github.com/mashenjun/mole/dispatch"
-	"github.com/pingcap/errors"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 )
